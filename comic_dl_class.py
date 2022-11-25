@@ -48,8 +48,9 @@ class comic_site():
                 os.remove(str(i)+'.jpg')
             tqdm.write('{:40s}: Done'.format(title))
             fil.close()
+            os.chdir("..")
+
         tqdm.write('Downloaded {} comics'.format(len(links)))
-        os.chdir("..")
         return
     
     def multi_parse(self,link):
