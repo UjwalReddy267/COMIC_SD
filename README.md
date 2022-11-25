@@ -7,9 +7,13 @@ Run the main.py file to start the program.
 Copy the link of the comic you want to download and enter it in the promt. The comic is downloaded and stored in the downloads folder
 
 You can also copy the link to the webpage that shows the list of all the issue in a particular comic (Ex.: https://readcomiconline.li/Comic/The-Amazing-Spider-Man-2018). You will then get a prompt too select the issues you want to download. You can choose the issues however you want. The list is numbered and the input needs to be in terms of these numbers abd not the issue numbers
+
 10        --  Download 10th comic in the list
+
 5-8       --  Downloads thee comics 5,6,7,8
+
 1,10-15   -- Downloads 1,10,11,12,13,14,15
+
 0         -- Downloads all comics in the list
 
 ## Comic search
