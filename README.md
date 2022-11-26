@@ -1,7 +1,7 @@
 # COMIC_SD
 Search and download comic books from online comic reading sites
 
-Run the main.py file to start the program.
+Download the latest .exe file from releases and run it to start
 
 ## Download comics with link
 Copy the link of the comic you want to download and enter it in the promt. The comic is downloaded and stored in the downloads folder
