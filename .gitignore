@@ -15,6 +15,7 @@ downloads/
 eggs/
 .eggs/
 lib/
+Lib/
 lib64/
 parts/
 sdist/
@@ -133,3 +134,6 @@ dmypy.json
 Dev_tools/
 log.txt
 downloads/
+Scripts/
+pyvenv.cfg
+requirements.txt
