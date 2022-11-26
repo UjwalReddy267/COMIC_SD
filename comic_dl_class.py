@@ -60,7 +60,7 @@ class comic_site():
         titles = titles[::-1]
         for i,title in enumerate(titles):
             print("{0:3d}) {1}".format(i+1,title))
-        book_nums = input('Enter the serial number of the books (Ex: 10/1-2/4 10-15):').split(' ')
+        book_nums = input('Enter the serial number of the books (Ex: 10/1-2/4 10-15):').split(',')
         links = []
         if '0' in book_nums:
             links.extend([comic for comic in comics])

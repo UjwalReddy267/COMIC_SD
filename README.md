@@ -12,8 +12,8 @@ You can also copy the link to the webpage that shows the list of all the issue i
 |------------------|-----------------------------------------------|
 | 10               | Downloads the 10th issue of the list          |
 | 5-8              | Downloads 5,6,7,8                             |
-| 1 10-15          | Downloads 1,10,11,12,13,14 and 15             |
-| 1 10-15 17 18-20 | Downloads 1,10,11,12,13,14,15,17,18,19 and 20 |
+| 1,10-15          | Downloads 1,10,11,12,13,14 and 15             |
+| 1,10-15,17,18-20 | Downloads 1,10,11,12,13,14,15,17,18,19 and 20 |
 | 0                | Downloads all the issues of the comic         |
 
 ## Comic search
