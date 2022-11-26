@@ -75,13 +75,7 @@ class comiconline(comic_site):
                 cur_page = int(text.find_all('a')[-2].get_text())
                 soup = self.get_soup(self.search_link+search_term+'&page='+n_page)
                 results[cur_page] = self.get_search_titles(soup)
-                with open("log.txt",'a') as log:
-                    log.write(last+'\n')
-                    log.write('n_page='+n_page+'\n')
-            
             else:
-                with open("log.txt",'a') as log:
-                    log.write('last_page='+n_page+'\n')
                 return results,int(n_page)
 
 
