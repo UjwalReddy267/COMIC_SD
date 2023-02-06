@@ -4,7 +4,7 @@ from comic_dl_class import comic_site
 
 class comicextra(comic_site):
     image_location = 'src'
-    search_link = "https://www.comicextra.com/comic-search?key="
+    search_link = "https://ww1.comicextra.com/comic-search?key="
     #search_res_box = ["div","class","cartoon-box"]
     search_res_box = 'cartoon-box'
 
@@ -57,12 +57,10 @@ class comicextra(comic_site):
 
     def get_last_page(self,search_term):
         results = {}
-        try:
-            soup = self.get_soup(self.search_link+search_term)
-            text = soup.find_all('div',{'class','general-nav'})[-1]
-        except IndexError:
-            self.search_link = "https://ww1.comicextra.com/comic-search?key="
-            soup = self.get_soup(self.search_link+search_term)
+
+        soup = self.get_soup(self.search_link+search_term)
+        text = soup.find_all('div',{'class','general-nav'})[-1]
+
         n_page = 1
         while 1:
             text = soup.find_all('div',{'class','general-nav'})[-1]
