@@ -126,4 +126,3 @@ class comic_site():
                     self.multi_parse(cur_page_results[int(request)-1][0])
                     return
         return
-#Test
