@@ -4,14 +4,11 @@ from comic_dl_class import comic_site
 
 class comiconline(comic_site):
     search_link = "https://comiconlinefree.net/comic-search?key="
-    #search_res_box = ["div","class","manga-box"]
     search_res_box = 'manga-box'
 
     def __init__(self,query):
-        #self.get_comics(query)
-        if query == '2' or '.com' not in query or len(query.split('.com')[-1])<=1:
-            search_term = input('Enter search term: ')
-            self.get_search_results(search_term)
+        if '.com' not in query : #or len(query.split('.com')[-1])<=1
+            self.get_search_results(query)
         else:
             self.get_comics(query)
 

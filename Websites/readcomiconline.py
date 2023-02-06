@@ -8,9 +8,8 @@ class readcomiconline(comic_site):
     search_link = "https://readcomiconline.li/Search/Comic/comicName="
     site = 'https://readcomiconline.li'
     def __init__(self,query):
-        if query == '3' or '.li' not in query or len(query.split('.li')[-1])<=1:
-            search_term = input('Enter search term: ')
-            self.get_search_results(search_term)
+        if '.li' not in query : #or len(query.split('.li')[-1])<=1
+            self.get_search_results(query)
         else:
             self.get_comics(query)
         return
