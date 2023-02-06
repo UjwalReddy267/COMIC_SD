@@ -21,3 +21,4 @@ elif 'readcomiconline' in query or query == '3':
     a = readcomiconline(query)
 
 print(datetime.now()-start)
+input()
