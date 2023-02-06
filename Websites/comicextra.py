@@ -5,7 +5,6 @@ from comic_dl_class import comic_site
 class comicextra(comic_site):
     image_location = 'src'
     search_link = "https://ww1.comicextra.com/comic-search?key="
-    #search_res_box = ["div","class","cartoon-box"]
     search_res_box = 'cartoon-box'
 
     def __init__(self,query):
