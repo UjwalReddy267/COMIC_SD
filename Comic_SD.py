@@ -11,9 +11,7 @@ if not os.path.exists('./downloads'):
 with open('log.txt','a') as log:
     log.write(str(datetime.now())+'\n')
 
-
-
-root,frame = gui.start()
+root = gui.start()
 
 root.mainloop()
 

@@ -28,11 +28,6 @@ class comic_site():
         title = re.sub('\s{2,}',' ',title)
         return title.strip()
 
-    def get_comics(self,link):
-        if self.is_chap_list(link):
-            self.multi_parse(link)
-        else:
-            self.comic_dl([link])
 
     def comic_dl(self,links):
         
@@ -54,29 +49,7 @@ class comic_site():
         tqdm.write('Downloaded {} comics'.format(len(links)))
         return
     
-    def multi_parse(self,link):
-        soup = self.get_soup(link)
-        comics,titles = self.get_chaps(soup)
-        comics = comics[::-1]
-        titles = titles[::-1]
-        for i,title in enumerate(titles):
-            print("{0:3d}) {1}".format(i+1,title))
-        book_nums = input('Enter the serial number of the books (Ex: 10/1-2/4 10-15):').split(',')
-        links = []
-        if '0' in book_nums:
-            links.extend([comic for comic in comics])
-        else:
-            for loc in book_nums:
-                ind = list(map(int,loc.split('-')))
-                if len(ind)==1:
-                    links.extend([comics[ind[0]-1]])
-                elif len(ind)==2:
-                    links.extend([comic for comic in comics[ind[0]-1:ind[1]]])
-        os.system('cls')
-        self.comic_dl(links)	
-        return
-
-    
+  
 
     def get_search_results(self,search_term):
 	

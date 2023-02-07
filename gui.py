@@ -9,7 +9,7 @@ def clear_window(win):
 
 def start():
     root = Tk()
-    root.geometry("500x500") 
+    root.geometry("700x500") 
     global frame
     frame = Frame(root,bd=10)
     frame.grid()
@@ -18,13 +18,13 @@ def start():
     query_box.grid(row=0,column=0)
     go_button = Button(frame,text='Go!',command=lambda:go(query_box.get()))
     go_button.grid(row=1,column=0)
-    return root,frame
+    return root
 
 def go(query):
     if '.' not in query and '/' not in query:
         site_select(query)
     else:
-        download(query)
+        parseLink(query)
 
 def site_select(query):
     clear_window(frame)
@@ -35,19 +35,56 @@ def site_select(query):
     Radiobutton(frame,text='comicextra',variable=r,value=1).grid(row=1,column=0,sticky=W)
     Radiobutton(frame,text='comiconlinefree',variable=r,value=2).grid(row=2,column=0,sticky=W)
     Radiobutton(frame,text='readcomiconline',variable=r,value=3).grid(row=3,column=0,sticky=W)
-    Button(frame,text='Search',command=lambda:download(query,r.get())).grid(row=4,column=0)
+    Button(frame,text='Search',command=lambda:search(query,r.get())).grid(row=4,column=0)
 
 
-def download(query,r=0):
-    if 'comicextra' in query or r==1:
-        a = comicextra(query)
-    if 'comiconlinefree' in query or r==2:
-        a = comiconline(query)
-    if 'readcomiconline' in query or r==3:
-        a = readcomiconline(query)
+def parseLink(query,r=0):
+    if 'comicextra' in query:
+        a = comicextra()
+    elif 'comiconlinefree' in query:
+        a = comiconline()
+    elif 'readcomiconline' in query:
+        a = readcomiconline()
+    
+    if a.is_chap_list(query):
+        listChapters(a,query)
+    else:
+        download(a,[query])
+
+def search(query,site):
+    if site == 1:
+        a = comicextra()
+    elif site == 2:
+        a = comiconline()
+    elif site == 3:
+        a = readcomiconline()
+    
 
 def listComics():
     pass
 
-def listChapters():
-    pass
+def listChapters(a,query):
+    soup = a.get_soup(query)
+    comics,titles = a.get_chaps(soup)
+
+    clear_window(frame)
+    scrollBar = Scrollbar(frame)
+    listBox = Listbox(frame,selectmode=EXTENDED,yscrollcommand=scrollBar.set,height=25,width=75)
+
+    for i in range(len(titles)):
+        listBox.insert(i,titles[i])
+
+    listBox.grid(row=0,column=0)
+    scrollBar.config( command = listBox.yview )
+    scrollBar.grid(row=0,column=1,sticky=N+S+E)
+
+    Button(frame,text='Download',command=lambda:downloadChaps(a,comics,listBox.curselection())).grid()
+
+def downloadChaps(a,comics,selection):
+    links = []
+    for i in selection:
+        links.append(comics[i])
+    download(a,links)
+
+def download(a,links):
+    a.comic_dl(links)

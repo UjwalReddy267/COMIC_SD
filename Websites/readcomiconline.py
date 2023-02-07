@@ -8,13 +8,13 @@ import urllib.request
 class readcomiconline(comic_site):
     search_link = "https://readcomiconline.li/Search/Comic/comicName="
     site = 'https://readcomiconline.li'
-    def __init__(self,query):
-        if '.li' not in query : #or len(query.split('.li')[-1])<=1
-            self.get_search_results(query)
-        else:
-            self.get_comics(query)
-            print(query)
-        return
+    """    def __init__(self,query):
+            if '.li' not in query : #or len(query.split('.li')[-1])<=1
+                self.get_search_results(query)
+            else:
+                self.get_comics(query)
+                print(query)
+            return"""
 
     def is_chap_list(self,link):
         return 0 if '?id=' in link else 1

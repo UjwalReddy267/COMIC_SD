@@ -6,13 +6,12 @@ class comiconline(comic_site):
     search_link = "https://comiconlinefree.net/comic-search?key="
     search_res_box = 'manga-box'
 
-    def __init__(self,query):
+    """def __init__(self,query):
         if '.com' not in query : #or len(query.split('.com')[-1])<=1
             self.get_search_results(query)
         else:
             self.get_comics(query)
-
-        return 
+        return """
 
     def is_chap_list(self,link):
         return 1 if link.split('/')[3] == 'comic' else 0
