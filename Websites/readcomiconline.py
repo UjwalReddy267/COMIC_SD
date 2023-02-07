@@ -3,6 +3,7 @@ sys.path.append('../Comic-dl')
 from comic_dl_class import comic_site
 import re
 from base64 import b64decode
+import urllib.request
 
 class readcomiconline(comic_site):
     search_link = "https://readcomiconline.li/Search/Comic/comicName="
@@ -66,6 +67,9 @@ class readcomiconline(comic_site):
         a = table.find_all("a")
         comics = [self.site+i.get('href') for i in a]
         titles = [i.get_text() for i in a]
+        #Get cover image
+        cover_img = soup.find('div',{'class':'col cover'}).find('img').get('src')
+        self.img_download(self.site+cover_img,'cover')
         return comics,titles
 
     def get_search_titles(self,soup):
@@ -92,7 +96,3 @@ class readcomiconline(comic_site):
             search_results[i+1] = cur_page_res
 
         return search_results,last_page
-
-
-
-

@@ -36,6 +36,9 @@ class comiconline(comic_site):
         a = soup.find_all("a",{"class","ch-name"})
         comics = [i.get('href') for i in a]
         titles = [i.get_text() for i in a]
+        #Get cover image
+        cover_img = soup.find('img',{'id':'series_image'}).get('src')
+        self.img_download('https:'+cover_img,'cover')
         return comics,titles
 
     def no_results(self,soup):

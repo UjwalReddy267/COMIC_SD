@@ -5,6 +5,7 @@ import urllib.request
 import os
 from tqdm.auto import tqdm
 import re
+import shutil
 
 class comic_site():
     bar_format = '{desc:40s}:{percentage:3.0f}%|{bar}|{n_fmt}/{total_fmt} [{elapsed}s, {rate_fmt}{postfix}]'
@@ -43,7 +44,7 @@ class comic_site():
             os.chdir('./downloads')
             fil = ZipFile(title+'.cbr','w')
             for i,image in enumerate(tqdm(images,desc=title,leave=False,colour='green',unit='image',position=1,bar_format=self.bar_format)):
-                urllib.request.urlretrieve(image,str(i)+'.jpg')
+                self.img_download(image,str(i))
                 fil.write(''+str(i)+'.jpg')
                 os.remove(str(i)+'.jpg')
             tqdm.write('{:40s}: Done'.format(title))
@@ -126,3 +127,9 @@ class comic_site():
                     self.multi_parse(cur_page_results[int(request)-1][0])
                     return
         return
+
+    def img_download(self,src,name):
+        res = requests.get(src, stream = True)
+
+        with open(name+'.jpg','wb') as f:
+            shutil.copyfileobj(res.raw, f)

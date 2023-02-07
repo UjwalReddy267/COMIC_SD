@@ -38,6 +38,9 @@ class comicextra(comic_site):
         a = chap_list.find_all("a")
         comics = [i.get('href') for i in a]
         titles = [i.get_text() for i in a]
+        #Get cover image
+        cover_img = soup.find('div',{'class':'movie-l-img'}).find('img').get('src')
+        self.img_download(cover_img,'cover')
         return comics,titles
     
     def no_results(self,soup):
