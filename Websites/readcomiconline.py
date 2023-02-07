@@ -12,6 +12,7 @@ class readcomiconline(comic_site):
             self.get_search_results(query)
         else:
             self.get_comics(query)
+            print(query)
         return
 
     def is_chap_list(self,link):
