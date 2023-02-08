@@ -12,7 +12,8 @@ class comic_site():
     escapes = ''.join([chr(char) for char in range(1, 32)])
     escapes+='/:?\\|*><\"\n'
     translator = str.maketrans('', '', escapes)
-    driver = None
+    searchResults = {}
+    query = ''
 
     def get_soup(self,link):
         r = requests.get(link)

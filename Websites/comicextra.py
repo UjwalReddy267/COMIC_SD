@@ -7,13 +7,9 @@ class comicextra(comic_site):
     search_link = "https://ww1.comicextra.com/comic-search?key="
     search_res_box = 'cartoon-box'
 
-    """def __init__(self,query):
-        
-        if '.com' : #not in query or len(query.split('.com')[-1])<=1
-            self.get_search_results(query)
-        else:
-            self.get_comics(query)
-        return"""
+    def __init__(self,query):
+        self.query = query
+        return
 
     def is_chap_list(self,link):
         return 1 if link.split('/')[3] == 'comic' else 0
@@ -48,8 +44,9 @@ class comicextra(comic_site):
             return 1
         else: return 0
     
-    def get_search_titles(self,soup):
+    def get_search_titles(self,link):
         titles = []
+        soup = self.get_soup(link)
         table = soup.find_all('div',{'class':'cartoon-box'})
         if table == []: return None
         for box in table:
@@ -57,8 +54,7 @@ class comicextra(comic_site):
         return titles
 
     def get_last_page(self,search_term):
-        results = {}
-
+        results = self.searchResults
         soup = self.get_soup(self.search_link+search_term)
         text = soup.find_all('div',{'class','general-nav'})[-1]
 
@@ -68,20 +64,18 @@ class comicextra(comic_site):
             try:
                 last = text.find_all('a')[-1].get_text()
                 if last == 'Z':
-                    return None,None
+                    return 0
             except IndexError:
-                soup = self.get_soup(self.search_link+search_term+'&page='+'1')
-                results[1] = self.get_search_titles(soup)
-                return results, 1
+                results[1] = self.get_search_titles(self.search_link+search_term+'&page='+'1')
+                return 1
             
             if last == 'Next':
                 n_page = text.find_all('a')[-2].get_text()
-                cur_page = int(text.find_all('a')[-2].get_text())
-                soup = self.get_soup(self.search_link+search_term+'&page='+n_page)
-                results[cur_page] = self.get_search_titles(soup)
-
+                n_link = self.search_link+search_term+'&page='+n_page
+                soup = self.get_soup(n_link)
+                results[int(n_page)] = self.get_search_titles(n_link)
             else:
-                return results,int(n_page)
+                return int(n_page)
 
 
 

@@ -4,16 +4,19 @@ from Websites.readcomiconline import readcomiconline
 from datetime import datetime
 import os
 from tkinter import *
-import gui
+from gui import gui
 
 if not os.path.exists('./downloads'):
     os.mkdir('downloads')
+if not os.path.exists('./downloads/temp'):
+    os.mkdir('downloads/temp')
 with open('log.txt','a') as log:
     log.write(str(datetime.now())+'\n')
 
-root = gui.start()
+root = gui()
+root.start()
 
-root.mainloop()
+mainloop()
 
 input()
 
