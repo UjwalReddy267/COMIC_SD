@@ -66,31 +66,32 @@ class readcomiconline(comic_site):
         titles = [i.get_text() for i in a]
         #Get cover image
         cover_img = soup.find('div',{'class':'col cover'}).find('img').get('src')
-        self.img_download(self.site+cover_img,'cover')
+        self.img_download(self.site+cover_img,'cover','downloads/temp/')
         return comics,titles
 
     def get_search_titles(self,link):
         soup = self.get_soup(link)
         titles = []
-        for box in soup.find_all('div',{'class':'cartoon-box'}):
-            titles.append([self.site+box.find_all('a')[0].get('href'),box.find_all('a')[1].get_text()])
+        table = soup.find_all('div',{'class':'col cover'})
+        print(len(table))
+        if table == []:
+            return None
+        for n,box in enumerate(table):
+            imgLink = box.find('img').get('src')
+            if 'https' not in imgLink:
+                imgLink = self.site+imgLink
+            titles.append([self.site+box.find('a').get('href'),box.find('img').get('title'),imgLink])
         return titles
 
     def get_last_page(self,search_term):
         search_results = self.searchResults
-        links = []
-        titles = []
-        soup = self.get_soup(self.search_link+search_term)
-        table = soup.find_all('div',{'class':'col cover'})
-        if table == []: return 0
-        for a in table:
-            links.append(self.site+a.find('a').get('href'))
-            titles.append(a.find('img').get('title'))
-        last_page = len(links)//25 + (0 if len(links)%25==0 else 1)
+
+        titles = self.get_search_titles(self.search_link+search_term)
+
+        last_page = len(titles)//25 + (0 if len(titles)%25==0 else 1)
         for i in range(last_page):
             cur_page_res = []
             for j in range(i*25,min(i*25+25,len(titles))):
-                cur_page_res.append([links[j],titles[j]]) 
+                cur_page_res.append(titles[j]) 
             search_results[i+1] = cur_page_res
-
         return int(last_page)

@@ -34,7 +34,7 @@ class comiconline(comic_site):
         titles = [i.get_text() for i in a]
         #Get cover image
         cover_img = soup.find('img',{'id':'series_image'}).get('src')
-        self.img_download('https://'+cover_img.split('//')[-1],'cover')
+        self.img_download('https://'+cover_img.split('//')[-1],'cover',path='downloads/temp/')
         return comics,titles
 
     def no_results(self,soup):
@@ -46,9 +46,11 @@ class comiconline(comic_site):
         titles = []
         soup = self.get_soup(link)
         table = soup.find_all('div',{'class':'manga-box'})
+
         if table == []: return None
-        for box in table:
-            titles.append([box.find_all('a')[0].get('href'),box.find_all('a')[1].get_text()])
+        for n,box in enumerate(table):
+            imgLink = box.find('img').get('src')
+            titles.append([box.find_all('a')[0].get('href'),box.find_all('a')[1].get_text(),imgLink])
         return titles
 
     def get_last_page(self,search_term):

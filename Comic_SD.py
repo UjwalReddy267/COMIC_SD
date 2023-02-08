@@ -6,6 +6,8 @@ import os
 from tkinter import *
 from gui import gui
 
+import shutil  
+
 if not os.path.exists('./downloads'):
     os.mkdir('downloads')
 if not os.path.exists('./downloads/temp'):
@@ -16,7 +18,8 @@ with open('log.txt','a') as log:
 root = gui()
 root.start()
 
+
 mainloop()
 
 input()
-
+shutil.rmtree('downloads/temp')
