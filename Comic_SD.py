@@ -18,8 +18,7 @@ with open('log.txt','a') as log:
 root = gui()
 root.start()
 
-
 mainloop()
 
-input()
 shutil.rmtree('downloads/temp')
+input()
