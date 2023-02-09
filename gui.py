@@ -2,6 +2,7 @@ from tkinter import *
 from Websites.comicextra import comicextra
 from Websites.comiconline import comiconline
 from Websites.readcomiconline import readcomiconline
+from PIL import ImageTk, Image
 
 
 class gui():
@@ -20,7 +21,7 @@ class gui():
 
     def start(self):
         root = self.root
-        #root.geometry("1000x1000") 
+        root.geometry("500x800") 
         query_box = Entry(root)
         query_box.grid(row=0,column=0)
         go_button = Button(root,text='Go!',command=lambda:self.go(query_box.get()))
@@ -107,7 +108,7 @@ class gui():
         
         if curPage != 0:
             self.searchFrames[curPage].pack_forget()
-        self.searchFrames[newPage].pack()
+        self.searchFrames[newPage].pack(ipadx=500,ipady=600)
 
 
     def createFrame(self,page):
@@ -119,7 +120,6 @@ class gui():
         maxPage = minPage+4 if minPage+4<=lpage else lpage
 
         outerFrame = Frame(root,highlightbackground='red',highlightthickness=2)
-        innerFrame = Frame(outerFrame,width= 400,height=400,highlightbackground='blue',highlightthickness=2)
 
         for n,j in enumerate(range(minPage,maxPage+1)):
             nav = Button(outerFrame,text=str(j),command=lambda m = j: self.listResults(page,m))
@@ -131,16 +131,43 @@ class gui():
 
         if page not in searchResults:    
             searchResults[page] = a.get_search_titles(a.search_link+a.query)    
+
+        innerFrame = Frame(outerFrame,highlightbackground='blue',highlightthickness=2)
+        innerFrame.grid(row=0,column=0,columnspan=5,ipadx=200,ipady=100)
+        canvas = Canvas(innerFrame) 
+        canvas.pack(side=LEFT,fil=BOTH,expand=1)
         
+        scrollbar = Scrollbar(innerFrame,orient=VERTICAL,command=canvas.yview)
+        scrollbar.pack(side=RIGHT,fill=Y)
+
+        canvas.configure(yscrollcommand=scrollbar.set)
+        canvas.bind('<Configure>',lambda e:canvas.configure(scrollregion=canvas.bbox('all')))
+        frame1 = Frame(canvas)
+        canvas.create_window((0,0),window=frame1,anchor='nw')
+
         for i in range(len(searchResults[page])):
             a.img_download(searchResults[page][i][2],str(page)+'_'+str(i),'downloads/temp/')
-            titleFrame = Frame(innerFrame,highlightbackground='black',highlightthickness=2,width = 550,height=10,cursor='hand2')
-            label = Label(titleFrame,text = searchResults[page][i][1])
-            label.pack()
+            titleFrame = Frame(frame1,highlightbackground='black',highlightthickness=2,width = 550,height=10,cursor='hand2',background='green')
+            titleFrame.grid(sticky=E+W,row=i,column=0)
+            titleFrame.columnconfigure(0,weight=2)
+            titleFrame.columnconfigure(1,weight=1)
+            
+            label = Label(titleFrame,text = searchResults[page][i][1],background='green',font=('Segoe UI',15))
+            label.grid(row=0,column=0,padx=10,sticky=W)
+            image = Image.open('downloads/temp/'+str(page)+'_'+str(i)+'.jpg')
+            image.thumbnail((50,50))
+            image = ImageTk.PhotoImage(image)
+            imageLabel = Label(titleFrame,image=image,justify=RIGHT,relief="sunken",bd=5)
+            imageLabel.image = image
+            imageLabel.grid(row=0,column=3,sticky=E)
+
+
             titleFrame.bind('<Button-1>',lambda event,m = i:self.listChapters(searchResults[page][m][0]))
             label.bind('<Button-1>',lambda event,m = i:self.listChapters(searchResults[page][m][0]))
-            titleFrame.grid(sticky=E+W,row=i,column=0)
-            titleFrame.tkraise(aboveThis=label)
-        innerFrame.grid(row=0,column=0,columnspan=5,pady=(0,50))
+            imageLabel.bind('<Button-1>',lambda event,m = i:self.listChapters(searchResults[page][m][0]))
+
+            
+            
+        
         return outerFrame
 
