@@ -42,8 +42,9 @@ class comiconline(comic_site):
             return 1
         else: return 0
 
-    def get_search_titles(self,link):
+    def get_search_titles(self,page):
         titles = []
+        link = self.search_link+self.query+'&page='+str(page)
         soup = self.get_soup(link)
         table = soup.find_all('div',{'class':'manga-box'})
 
@@ -54,12 +55,14 @@ class comiconline(comic_site):
         return titles
 
     def get_last_page(self,search_term):
-        results = self.searchResults
-
-        soup = self.get_soup(self.search_link+search_term)
         
+        results = self.searchResults
         n_page = 1
+        
+        
+        
         while 1:
+            soup = self.get_soup(self.search_link+search_term+'&page='+str(n_page))
             text = soup.find_all('div',{'class','general-nav'})[-1]
             try:
                 last = text.find_all('a')[-1].get_text()
@@ -69,13 +72,15 @@ class comiconline(comic_site):
                     return 0
                 return 1
             
+            results[n_page] = self.get_search_titles(n_page)
+
             if last == 'Next':
-                n_page = text.find_all('a')[-2].get_text()
-                n_link = self.search_link+search_term+'&page='+n_page
-                soup = self.get_soup(n_link)
-                results[int(n_page)] = self.get_search_titles(n_link)
+                n_page = int(text.find_all('a')[-2].get_text())
+                
             else:
-                return int(n_page)
+                break
+        
+        return n_page
 
 
 

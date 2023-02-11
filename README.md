@@ -6,7 +6,7 @@ Download the latest .exe file from releases and run it to start
 ## Download comics with link
 Copy the link of the comic you want to download and enter it in the promt. The comic is downloaded and stored in the downloads folder
 
-You can also copy the link to the webpage that shows the list of all the issue in a particular comic (Ex.: https://readcomiconline.li/Comic/The-Amazing-Spider-Man-2018). You will then get a prompt too select the issues you want to download. You can choose the issues however you want. The list is numbered and the input needs to be in terms of these numbers abd not the issue numbers
+You can also copy the link to the webpage that shows the list of all the issues in a particular comic (Ex.: https://readcomiconline.li/Comic/The-Amazing-Spider-Man-2018). You will then get a prompt to select the issues you want to download. You can choose the issues however you want. The list is numbered and the input needs to be in terms of these numbers abd not the issue numbers
 
 |  Numbers Entered | Issues Downloaded                             |
 |------------------|-----------------------------------------------|

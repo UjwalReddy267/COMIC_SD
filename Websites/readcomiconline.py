@@ -73,7 +73,6 @@ class readcomiconline(comic_site):
         soup = self.get_soup(link)
         titles = []
         table = soup.find_all('div',{'class':'col cover'})
-        print(len(table))
         if table == []:
             return None
         for n,box in enumerate(table):

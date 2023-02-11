@@ -44,8 +44,9 @@ class comicextra(comic_site):
             return 1
         else: return 0
     
-    def get_search_titles(self,link):
+    def get_search_titles(self,page):
         titles = []
+        link = self.search_link+self.query+'&page='+str(page)
         soup = self.get_soup(link)
         table = soup.find_all('div',{'class':'cartoon-box'})
         if table == []: return None
@@ -55,28 +56,31 @@ class comicextra(comic_site):
         return titles
 
     def get_last_page(self,search_term):
+        
         results = self.searchResults
-        soup = self.get_soup(self.search_link+search_term)
-        text = soup.find_all('div',{'class','general-nav'})[-1]
-
         n_page = 1
+        
+        #text = soup.find_all('div',{'class','general-nav'})[-1]
+        
         while 1:
+            soup = self.get_soup(self.search_link+search_term+'&page='+str(n_page))
             text = soup.find_all('div',{'class','general-nav'})[-1]
             try:
                 last = text.find_all('a')[-1].get_text()
                 if last == 'Z':
                     return 0
             except IndexError:
-                results[1] = self.get_search_titles(self.search_link+search_term+'&page='+'1')
+                results[1] = self.get_search_titles(n_page)
                 return 1
             
+            results[n_page] = self.get_search_titles(n_page)
+
             if last == 'Next':
-                n_page = text.find_all('a')[-2].get_text()
-                n_link = self.search_link+search_term+'&page='+n_page
-                soup = self.get_soup(n_link)
-                results[int(n_page)] = self.get_search_titles(n_link)
+                n_page = int(text.find_all('a')[-2].get_text())
             else:
-                return int(n_page)
+                break
+
+        return n_page
 
 
 
