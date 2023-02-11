@@ -59,15 +59,17 @@ class readcomiconline(comic_site):
         return enc
 
 
-    def get_chaps(self,soup):
+    def get_chaps(self,link):
+        soup = self.get_soup(link)
+        name = soup.find('div',{'class':'heading'}).get_text()
         table = soup.find('ul',{"class":"list"})
         a = table.find_all("a")
-        comics = [self.site+i.get('href') for i in a]
+        chapters = [self.site+i.get('href') for i in a]
         titles = [i.get_text() for i in a]
         #Get cover image
         cover_img = soup.find('div',{'class':'col cover'}).find('img').get('src')
         self.img_download(self.site+cover_img,'cover','downloads/temp/')
-        return comics,titles
+        return name,chapters,titles
 
     def get_search_titles(self,link):
         soup = self.get_soup(link)
@@ -87,10 +89,10 @@ class readcomiconline(comic_site):
 
         titles = self.get_search_titles(self.search_link+search_term)
 
-        last_page = len(titles)//25 + (0 if len(titles)%25==0 else 1)
-        for i in range(last_page):
+        self.lPage = len(titles)//25 + (0 if len(titles)%25==0 else 1)
+        for i in range(self.lPage):
             cur_page_res = []
             for j in range(i*25,min(i*25+25,len(titles))):
                 cur_page_res.append(titles[j]) 
             search_results[i+1] = cur_page_res
-        return int(last_page)
+        return

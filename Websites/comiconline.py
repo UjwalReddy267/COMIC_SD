@@ -5,6 +5,7 @@ from comic_dl_class import comic_site
 class comiconline(comic_site):
     search_link = "https://comiconlinefree.net/comic-search?key="
     search_res_box = 'manga-box'
+    
 
     def __init__(self,query):
         self.query = query
@@ -28,14 +29,16 @@ class comiconline(comic_site):
             lnks.append(i['data-original'])
         return lnks,title
 
-    def get_chaps(self,soup):
+    def get_chaps(self,link):
+        soup = self.get_soup(link)
+        name = soup.find_all('strong')[1].get_text()
         a = soup.find_all("a",{"class","ch-name"})
-        comics = [i.get('href') for i in a]
+        chapters = [i.get('href') for i in a]
         titles = [i.get_text() for i in a]
         #Get cover image
         cover_img = soup.find('img',{'id':'series_image'}).get('src')
         self.img_download('https://'+cover_img.split('//')[-1],'cover',path='downloads/temp/')
-        return comics,titles
+        return name,chapters,titles
 
     def no_results(self,soup):
         if len(soup.find_all('div',{"class":"general-nav"})) == 0:
@@ -56,13 +59,10 @@ class comiconline(comic_site):
 
     def get_last_page(self,search_term):
         
-        results = self.searchResults
-        n_page = 1
-        
-        
-        
+        results = self.searchResults        
+        self.lPage = 1
         while 1:
-            soup = self.get_soup(self.search_link+search_term+'&page='+str(n_page))
+            soup = self.get_soup(self.search_link+search_term+'&page='+str(self.lPage))
             text = soup.find_all('div',{'class','general-nav'})[-1]
             try:
                 last = text.find_all('a')[-1].get_text()
@@ -72,15 +72,13 @@ class comiconline(comic_site):
                     return 0
                 return 1
             
-            results[n_page] = self.get_search_titles(n_page)
+            results[self.lPage] = self.get_search_titles(self.lPage)
 
             if last == 'Next':
-                n_page = int(text.find_all('a')[-2].get_text())
-                
+                self.lPage = int(text.find_all('a')[-2].get_text())
             else:
                 break
-        
-        return n_page
+        return
 
 
 

@@ -14,6 +14,7 @@ class comic_site():
     translator = str.maketrans('', '', escapes)
     searchResults = {}
     query = ''
+    lPage = 0
 
     def get_soup(self,link):
         r = requests.get(link)
