@@ -1,8 +1,6 @@
 from bs4 import *
 import requests
 from zipfile import ZipFile
-import urllib.request
-import os
 from tqdm.auto import tqdm
 import re
 import shutil

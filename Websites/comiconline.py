@@ -58,9 +58,9 @@ class comiconline(comic_site):
         return titles
 
     def get_last_page(self,search_term):
-        
         results = self.searchResults        
         self.lPage = 1
+        
         while 1:
             soup = self.get_soup(self.search_link+search_term+'&page='+str(self.lPage))
             text = soup.find_all('div',{'class','general-nav'})[-1]

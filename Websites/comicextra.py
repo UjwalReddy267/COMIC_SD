@@ -6,7 +6,7 @@ class comicextra(comic_site):
     image_location = 'src'
     search_link = "https://ww1.comicextra.com/comic-search?key="
     search_res_box = 'cartoon-box'
-    lPage = 1
+    lPage = 0
 
     def __init__(self,query):
         self.query = query
@@ -59,10 +59,9 @@ class comicextra(comic_site):
         return titles
 
     def get_last_page(self,search_term):
-        
         results = self.searchResults      
         self.lPage = 1
-        
+
         while 1:
             soup = self.get_soup(self.search_link+search_term+'&page='+str(self.lPage))
             text = soup.find_all('div',{'class','general-nav'})[-1]
@@ -75,12 +74,10 @@ class comicextra(comic_site):
                 return 1
             
             results[self.lPage] = self.get_search_titles(self.lPage)
-
             if last == 'Next':
                 self.lPage = int(text.find_all('a')[-2].get_text())
             else:
                 break
-
         return
 
 

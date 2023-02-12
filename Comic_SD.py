@@ -1,25 +1,30 @@
-from Websites.comicextra import comicextra
-from Websites.comiconline import comiconline
-from Websites.readcomiconline import readcomiconline
+import traceback 
 from UI.gui import MainWindow
 from datetime import datetime
 import os
 import sys
-from PyQt6.QtWidgets import QApplication, QWidget, QLineEdit, QPushButton, QVBoxLayout
+from PyQt6.QtWidgets import QApplication
+import shutil 
+try:
+    try:
+        os.chdir(sys._MEIPASS)
+    except AttributeError:
+        pass
 
-import shutil  
+    if not os.path.exists('./downloads'):
+        os.mkdir('downloads')
+    if not os.path.exists('./downloads/temp'):
+        os.mkdir('downloads/temp')
+    with open('log.txt','a') as log:
+        log.write(str(datetime.now())+'\n')
 
+    app = QApplication(sys.argv)
+    window = MainWindow()
+    window.start()
+    app.exec()
+    shutil.rmtree('downloads/temp')
 
-if not os.path.exists('./downloads'):
-    os.mkdir('downloads')
-if not os.path.exists('./downloads/temp'):
-    os.mkdir('downloads/temp')
-with open('log.txt','a') as log:
-    log.write(str(datetime.now())+'\n')
-
-app = QApplication(sys.argv)
-window = MainWindow()
-window.start()
-app.exec()
-shutil.rmtree('downloads/temp')
-
+except Exception as e:
+    with open('log.txt','a') as f:
+        f.write(str(e))
+        f.write(traceback.format_exc())
