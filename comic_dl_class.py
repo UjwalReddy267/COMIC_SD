@@ -4,6 +4,9 @@ from zipfile import ZipFile
 from tqdm.auto import tqdm
 import re
 import shutil
+import time
+from PyQt6.QtWidgets import *
+
 
 class comic_site():
     bar_format = '{desc:40s}:{percentage:3.0f}%|{bar}|{n_fmt}/{total_fmt} [{elapsed}s, {rate_fmt}{postfix}]'
@@ -13,7 +16,7 @@ class comic_site():
     searchResults = {}
     query = ''
     lPage = 0
-
+    imagePages = {}
     def get_soup(self,link):
         r = requests.get(link)
         soup = BeautifulSoup(r.text,'html.parser')
@@ -29,22 +32,18 @@ class comic_site():
         return title.strip()
 
 
-    def comic_dl(self,links):
-        
-        for cnt,link in enumerate(tqdm(links,position=0,colour='red',desc='Downloading',unit='comic',bar_format=self.bar_format,leave=False)):
-            link = self.get_full_link(link)
-            soup = self.get_soup(link)
-            images,title = self.find_images(link)
-            
-            fil = ZipFile('downloads/'+title+'.cbr','w')
-            for i,image in enumerate(tqdm(images,desc=title,leave=False,colour='green',unit='image',position=1,bar_format=self.bar_format)):
-                self.img_download(image,str(i),path='downloads/temp/')
-                fil.write('downloads/temp/'+str(i)+'.jpg')
-            tqdm.write('{:40s}: Done'.format(title))
-            fil.close()
-        tqdm.write('Downloaded {} comics'.format(len(links)))
-        return
-    
+    def comic_dl(self,link,progress):
+        link = self.get_full_link(link)
+        images,title = self.find_images(link)
+        fil = ZipFile('downloads/'+title+'.cbr','w')
+        for i,image in enumerate(images):
+            self.img_download(image,str(i),path='downloads/temp/')
+            fil.write('downloads/temp/'+str(i)+'.jpg')
+            progress.emit(100*(i+1)//len(images))
+        fil.close()
+
+
+
     def img_download(self,src,name,path=''):
         res = requests.get(src, stream = True)
 

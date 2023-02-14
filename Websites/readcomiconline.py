@@ -88,6 +88,8 @@ class readcomiconline(comic_site):
         search_results = self.searchResults
 
         titles = self.get_search_titles(self.search_link+search_term)
+        if titles == None:
+            return 0
 
         self.lPage = len(titles)//25 + (0 if len(titles)%25==0 else 1)
         for i in range(self.lPage):

@@ -4,34 +4,72 @@ from Websites.readcomiconline import readcomiconline
 from PyQt6.QtWidgets import *
 import PyQt6.QtGui as qtg
 from PyQt6 import uic,QtCore
+from PyQt6.QtCore import QObject, QThread, pyqtSignal
 import os
 import urllib.parse
+import threading
+
+class startFrame(QWidget):
+    def __init__(self,*args,**kwargs):
+        super().__init__(*args,**kwargs)
+        uic.loadUi('Dev_tools/UI/start.ui',self)
+
+class chaptersFrame(QWidget):
+    def __init__(self,*args,**kwargs):
+        super().__init__(*args,**kwargs)
+        uic.loadUi('Dev_tools/UI/ChaptersView.ui',self)
+
+class searchFrame(QWidget):
+    def __init__(self,*args,**kwargs):
+        super().__init__(*args,**kwargs)
+        uic.loadUi('Dev_tools/UI/searchResults.ui',self)
+
+
+class downloadsFrame(QWidget):
+    def __init__(self,*args,**kwargs):
+        super().__init__(*args,**kwargs)
+        uic.loadUi('Dev_tools/UI/download.ui',self)
+
+class Worker(QObject):
+    finished = pyqtSignal()
+    progress = pyqtSignal(int)
+    def run(self,a,link):
+        a.comic_dl(link,self.progress)
+        #a.comicDL()
+        self.finished.emit()
 
 class MainWindow(QMainWindow):
 
     page = 1
     def __init__(self):
         super(MainWindow,self).__init__()
+        uic.loadUi('Dev_tools/UI/stack.ui',self)
+
+        self.startFrame = startFrame()
+        self.chaptersFrame = chaptersFrame()
+        self.searchFrame = searchFrame()
+        self.downloadsFrame = downloadsFrame()
+
+        self.mainStack.addWidget(self.startFrame)
+        self.mainStack.addWidget(self.chaptersFrame)
+        self.mainStack.addWidget(self.searchFrame)
+        self.mainStack.addWidget(self.downloadsFrame)
         self.show()  
     
     def start(self):
-        uic.loadUi('UI/Start.ui',self)
-        self.siteSelector.hide()
-        self.goButton.clicked.connect(self.go)
+        self.startFrame.siteSelector.hide()
+        self.startFrame.goButton.clicked.connect(self.go)
 
     def go(self):
-        query = self.queryField.text()
-        if '.' not in query and '/' not in query:
-            self.queryField.setDisabled(True)
-            self.startLabel.setText('Select a website')
-            self.siteSelector.show()
-            self.goButton.clicked.connect(lambda:self.search(query))
+        query = self.startFrame.queryField.text()
+        if '.' not in query or '/' not in query:
+            self.startFrame.queryField.setDisabled(True)
+            self.startFrame.startLabel.setText('Select a website')
+            self.startFrame.siteSelector.show()
+            self.startFrame.goButton.clicked.connect(lambda:self.search(query))
         else:
             self.parseLink(query)
 
-    def siteSelect(self,query):
-        self.siteSelector.show()
-        self.search(query)
 
     def parseLink(self,query):
         if 'comicextra' in query:
@@ -44,43 +82,87 @@ class MainWindow(QMainWindow):
         if self.a.is_chap_list(query):
             self.listChapters(query)
         else:
-            self.a.comic_dl([query])
-    
-    def listChapters(self,link,back=False,page=None):
-        a = self.a
-        uic.loadUi('UI/chapterView.ui',self)
-        if back == False:
-            self.backButton.setDisabled(True)
-        else:
-            self.backButton.clicked.connect(lambda:self.listResults(self.page))
-        name,chapters,titles = a.get_chaps(link)
-        #self.siteSelectorFrame.hide()
-        self.coverImageLabel.setPixmap(qtg.QPixmap("downloads/temp/cover.jpg").scaled(self.coverImageLabel.size(),QtCore.Qt.AspectRatioMode.KeepAspectRatio,QtCore.Qt.TransformationMode.SmoothTransformation))
 
-        self.comicNameLabel.setText(urllib.parse.unquote(name))
+            pBar = self.addPBar('name')
+            pBar.setValue(0)
+            self.mainStack.setCurrentIndex(3)
+            
+            self.createThread()
+            self.thread.started.connect(lambda:self.worker.run(self.a,query))
+            self.worker.progress.connect(lambda a:pBar.setValue(a))
+            self.thread.start()
+
+
+    def createThread(self):
+        self.thread = QThread()
+        self.worker = Worker()
+        self.worker.moveToThread(self.thread)
+        self.worker.finished.connect(self.thread.quit)
+        self.thread.finished.connect(self.thread.deleteLater)
+
+    def listChapters(self,link,back=False,page=None):
+        self.mainStack.setCurrentIndex(1)
+        a = self.a
+        if back == False:
+            self.chaptersFrame.backButton.setDisabled(True)
+            self.chaptersFrame.backButton.hide()
+        else:
+            #self.chaptersFrame.backButton.clicked.connect(lambda:self.listResults(self.page))
+            self.chaptersFrame.backButton.clicked.connect(lambda:self.mainStack.setCurrentIndex(2))
+
+        name,chapters,titles = a.get_chaps(link)
+        self.chaptersFrame.coverImageLabel.setPixmap(qtg.QPixmap("downloads/temp/cover.jpg").scaled(self.chaptersFrame.coverImageLabel.size(),QtCore.Qt.AspectRatioMode.KeepAspectRatio,QtCore.Qt.TransformationMode.SmoothTransformation))
+        self.chaptersFrame.comicNameLabel.setText(urllib.parse.unquote(name))
 
         font = qtg.QFont()
         font.setPointSize(12)
-        self.chapterList.setFont(font)
+        self.chaptersFrame.chapterList.setFont(font)
 
         for i in range(len(titles)):
             item = QListWidgetItem()
             item.setText(titles[i])
-            self.chapterList.addItem(item)
-        self.downChapButton.clicked.connect(lambda:self.downloadChaps(chapters))
+            item.setData(3,chapters[i])
+            self.chaptersFrame.chapterList.addItem(item)
+        self.chaptersFrame.downChapButton.clicked.connect(lambda:self.selectedChapters(chapters,titles))
+    
+    def selectedChapters(self,chapters,titles):
 
+        titles = [i.text() for i in self.chaptersFrame.chapterList.selectedItems()]
+        links = [i.data(3) for i in self.chaptersFrame.chapterList.selectedItems()]
+        self.mainStack.setCurrentIndex(3)
+        self.downloadChaps(links,titles,0)
+    
+    def downloadChaps(self,links,titles,n):
+        pBar = self.addPBar(titles[n])
+        self.createThread()
+        self.thread.started.connect(lambda:self.worker.run(self.a,links[n]))
+        self.worker.progress.connect(lambda a:pBar.setValue(a))
+        if n < len(links)-1:
+            self.thread.finished.connect(lambda:self.downloadChaps(links,titles,n+1))
+        self.thread.start()
 
-    def downloadChaps(self,comics):
-        links = []
-        try:
-            for i in self.chapterList.selectedIndexes():
-                links.append(comics[i.row()])
-        except IndexError:
-            pass
-        self.a.comic_dl(links)
+        
+    def addPBar(self,name):
+        horizontalLayout = QHBoxLayout()
+        label = QLabel(parent=self.downloadsFrame.scrollAreaWidgetContents)
+        label.setObjectName(name)
+        label.setMinimumSize(QtCore.QSize(200, 25))
+        label.setMaximumSize(QtCore.QSize(16777215, 25))
+        label.setText(name)
+        label.setWordWrap(True)
+        horizontalLayout.addWidget(label)
+        progressBar = QProgressBar(parent=self.downloadsFrame.scrollAreaWidgetContents)
+        progressBar.setMinimumSize(QtCore.QSize(0, 25))
+        progressBar.setValue(0)
+        progressBar.setMaximumSize(QtCore.QSize(16777215, 25))
+        progressBar.setProperty("value", 24)
+        horizontalLayout.addWidget(progressBar)
+        self.downloadsFrame.verticalLayout.addLayout(horizontalLayout)
+        return progressBar
+
 
     def search(self,query):
-        site = self.siteSelector.currentIndex()
+        site = self.startFrame.siteSelector.currentIndex()
         if site == 0:
             self.a = readcomiconline(query)
         elif site == 1:
@@ -91,77 +173,92 @@ class MainWindow(QMainWindow):
         
     
     def listResults(self,page):
-        uic.loadUi('UI/searchResults.ui',self)
+        
+        try:
+            for i in self.navButtons:
+                self.searchFrame.horizontalLayout_2.removeWidget(i)
+        except AttributeError:
+            pass
+        self.mainStack.setCurrentIndex(2)
         font = qtg.QFont()
         font.setPointSize(12)
-        self.resultsList.setFont(font)
+        self.searchFrame.resultsList.setFont(font)
         self.navButtons = []
         if self.a.lPage==0:
             self.a.get_last_page(self.a.query)
+            if self.a.lPage == 0:
+                QtCore.QCoreApplication.instance().quit()
         self.showPage(page)
 
     def showPage(self,page):
-        self.resultsList.clear()
+        self.searchFrame.resultsList.clear()
         lPage = self.a.lPage
         minPage = page-2 if (page-2)>0 else 1
         maxPage = minPage+4 if minPage+4<=lPage else lPage
+        
         for i in self.navButtons:
-            self.horizontalLayout_2.removeWidget(i)
+            self.searchFrame.horizontalLayout_2.removeWidget(i)
         
         self.navButtons = []
         
-        navButton = QPushButton(parent = self.navBar)
+        navButton = QPushButton(parent = self.searchFrame.navBar)
         navButton.setMinimumSize(QtCore.QSize(30,30))
         navButton.setMaximumSize(QtCore.QSize(30,30))
         navButton.setText('<<')
         if page==1:
             navButton.setDisabled(True)
-        navButton.clicked.connect(lambda :self.showPage(self.a.lpage))
+        navButton.clicked.connect(lambda :self.showPage(1))
         self.navButtons.append(navButton)
-        self.horizontalLayout_2.addWidget(navButton)
+        self.searchFrame.horizontalLayout_2.addWidget(navButton)
         
 
 
         for i in range(minPage,maxPage+1):
             
-            navButton = QPushButton(parent = self.navBar)
+            navButton = QPushButton(parent = self.searchFrame.navBar)
             
             navButton.setMinimumSize(QtCore.QSize(30,30))
             navButton.setMaximumSize(QtCore.QSize(30,30))
             navButton.setText(str(i))
             if i==page:
                 navButton.setDisabled(True)
-            self.horizontalLayout_2.addWidget(navButton)
+            self.searchFrame.horizontalLayout_2.addWidget(navButton)
             self.navButtons.append(navButton)
             navButton.clicked.connect(lambda state ,m = i:self.showPage(m))
         
-        navButton = QPushButton(parent = self.navBar)
+        navButton = QPushButton(parent = self.searchFrame.navBar)
         navButton.setMinimumSize(QtCore.QSize(30,30))
         navButton.setMaximumSize(QtCore.QSize(30,30))
         navButton.setText('>>')
         navButton.clicked.connect(lambda :self.showPage(lPage))
         if page==lPage:
             navButton.setDisabled(True)
-        self.horizontalLayout_2.addWidget(navButton)
+        self.searchFrame.horizontalLayout_2.addWidget(navButton)
         self.navButtons.append(navButton)
 
         if page not in self.a.searchResults.keys():
             self.a.get_search_titles(page)
 
+        
+
         for n,comic in enumerate(self.a.searchResults[page]):
-            if not os.path.exists(f'downloads/temp/{page}_{n}'):
+            if page not in self.a.imagePages:
+                self.a.imagePages[page]=[]
+            if n not in self.a.imagePages[page]:
                 self.a.img_download(comic[2],f'{page}_{n}','downloads/temp/')
+                self.a.imagePages[page].append(n)
             item = QListWidgetItem()
             icon = qtg.QIcon()
             icon.addPixmap(qtg.QPixmap(f"downloads/temp/{page}_{n}.jpg"), qtg.QIcon.Mode.Active, qtg.QIcon.State.On)
             item.setIcon(icon)
             size = QtCore.QSize(100,100)
-            self.resultsList.setIconSize(size)
+            self.searchFrame.resultsList.setIconSize(size)
             item.setText(comic[1])
             item.setData(3,comic[0])
-            self.resultsList.addItem(item)
+            self.searchFrame.resultsList.addItem(item)
+
         self.page = page
-        self.resultsList.itemClicked.connect(self.comicSelected)
+        self.searchFrame.resultsList.itemClicked.connect(self.comicSelected)
 
     def comicSelected(self,clickedItem):
         self.listChapters(clickedItem.data(3),back=True)

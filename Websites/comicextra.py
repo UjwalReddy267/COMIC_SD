@@ -56,10 +56,9 @@ class comicextra(comic_site):
         for n,box in enumerate(table):
             imgLink = box.find('img').get('src')
             titles.append([box.find_all('a')[0].get('href'),box.find_all('a')[1].get_text(),imgLink])
-        return titles
+        self.searchResults[page] = titles
 
-    def get_last_page(self,search_term):
-        results = self.searchResults      
+    def get_last_page(self,search_term):     
         self.lPage = 1
 
         while 1:
@@ -68,17 +67,17 @@ class comicextra(comic_site):
             try:
                 last = text.find_all('a')[-1].get_text()
                 if last == 'Z':
-                    return 0
+                    self.lPage = 0
+                    return
             except IndexError:
-                results[1] = self.get_search_titles(self.lPage)
-                return 1
-            
-            results[self.lPage] = self.get_search_titles(self.lPage)
+                self.get_search_titles(self.lPage)
+                self.lPage = 1
+                return
+            self.get_search_titles(self.lPage)
             if last == 'Next':
                 self.lPage = int(text.find_all('a')[-2].get_text())
             else:
                 break
-        return
 
 
 
