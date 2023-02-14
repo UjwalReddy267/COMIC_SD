@@ -4,7 +4,7 @@ from Websites.readcomiconline import readcomiconline
 from PyQt6.QtWidgets import *
 import PyQt6.QtGui as qtg
 from PyQt6 import uic,QtCore
-from PyQt6.QtCore import QObject, QThread, pyqtSignal
+from PyQt6.QtCore import QObject, QThread, pyqtSignal, QMetaMethod
 import urllib.parse
 
 class startFrame(QWidget):
@@ -103,7 +103,6 @@ class MainWindow(QMainWindow):
 
 
     def createThread(self,n):
-        print(f'Thread {n} created')
         self.thread = QThread()
         self.worker = Worker()
         self.worker.moveToThread(self.thread)
@@ -111,13 +110,18 @@ class MainWindow(QMainWindow):
         self.thread.finished.connect(self.delete)
     
     def delete(self):
-        print('Thread Deleted')
         self.thread.deleteLater()
 
 
     def listChapters(self,link,back=False,x=None):
-        print('Test')
+
         self.mainStack.setCurrentIndex(1)
+        #Check if button is connected
+        index = self.chaptersFrame.downChapButton.metaObject().indexOfMethod('clicked()')
+        method = self.chaptersFrame.downChapButton.metaObject().method(index)
+        if self.chaptersFrame.downChapButton.isSignalConnected(method):
+            self.chaptersFrame.downChapButton.clicked.disconnect()
+
         a = self.a
         if back == False:
             self.chaptersFrame.backButton.setDisabled(True)
@@ -132,22 +136,12 @@ class MainWindow(QMainWindow):
         font = qtg.QFont()
         font.setPointSize(12)
         self.chaptersFrame.chapterList.setFont(font)
-        if self.n == 1:
-            self.chaptersFrame.downChapButton.clicked.connect(self.test)
-        if self.n == 2:
-            self.chaptersFrame.downChapButton.clicked.connect(self.test2)
-        self.n += 1
+        self.chaptersFrame.downChapButton.clicked.connect(self.selectedChapters)
         for i in range(len(titles)):
             item = QListWidgetItem()
             item.setText(titles[i])
             item.setData(3,chapters[i])
             self.chaptersFrame.chapterList.addItem(item)
-        
-    
-    def test(self,a):
-        print('Test Hello')
-    def test2(self,a):
-        print('Test Hello 2')
     
     def selectedChapters(self):
         
