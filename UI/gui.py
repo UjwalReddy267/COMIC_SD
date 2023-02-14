@@ -5,9 +5,7 @@ from PyQt6.QtWidgets import *
 import PyQt6.QtGui as qtg
 from PyQt6 import uic,QtCore
 from PyQt6.QtCore import QObject, QThread, pyqtSignal
-import os
 import urllib.parse
-import threading
 
 class startFrame(QWidget):
     def __init__(self,*args,**kwargs):
@@ -24,7 +22,6 @@ class searchFrame(QWidget):
         super().__init__(*args,**kwargs)
         uic.loadUi('Dev_tools/UI/searchResults.ui',self)
 
-
 class downloadsFrame(QWidget):
     def __init__(self,*args,**kwargs):
         super().__init__(*args,**kwargs)
@@ -33,14 +30,24 @@ class downloadsFrame(QWidget):
 class Worker(QObject):
     finished = pyqtSignal()
     progress = pyqtSignal(int)
-    def run(self,a,link):
+    
+    def download(self):
+        a = self.a
+        link = self.link
         a.comic_dl(link,self.progress)
-        #a.comicDL()
         self.finished.emit()
+    
+    def lastPage(self):
+        self.a.get_last_page(self.a.query)
+        self.finished.emit()
+    
+    def search(self):
+        pass
+
+
 
 class MainWindow(QMainWindow):
-
-    page = 1
+    n = 1
     def __init__(self):
         super(MainWindow,self).__init__()
         uic.loadUi('Dev_tools/UI/stack.ui',self)
@@ -86,28 +93,36 @@ class MainWindow(QMainWindow):
             pBar = self.addPBar('name')
             pBar.setValue(0)
             self.mainStack.setCurrentIndex(3)
-            
-            self.createThread()
-            self.thread.started.connect(lambda:self.worker.run(self.a,query))
+        
+            self.createThread(1)
+            self.worker.a = self.a
+            self.worker.link = query
+            self.thread.started.connect(self.worker.download)
             self.worker.progress.connect(lambda a:pBar.setValue(a))
             self.thread.start()
 
 
-    def createThread(self):
+    def createThread(self,n):
+        print(f'Thread {n} created')
         self.thread = QThread()
         self.worker = Worker()
         self.worker.moveToThread(self.thread)
         self.worker.finished.connect(self.thread.quit)
-        self.thread.finished.connect(self.thread.deleteLater)
+        self.thread.finished.connect(self.delete)
+    
+    def delete(self):
+        print('Thread Deleted')
+        self.thread.deleteLater()
 
-    def listChapters(self,link,back=False,page=None):
+
+    def listChapters(self,link,back=False,x=None):
+        print('Test')
         self.mainStack.setCurrentIndex(1)
         a = self.a
         if back == False:
             self.chaptersFrame.backButton.setDisabled(True)
             self.chaptersFrame.backButton.hide()
         else:
-            #self.chaptersFrame.backButton.clicked.connect(lambda:self.listResults(self.page))
             self.chaptersFrame.backButton.clicked.connect(lambda:self.mainStack.setCurrentIndex(2))
 
         name,chapters,titles = a.get_chaps(link)
@@ -117,16 +132,25 @@ class MainWindow(QMainWindow):
         font = qtg.QFont()
         font.setPointSize(12)
         self.chaptersFrame.chapterList.setFont(font)
-
+        if self.n == 1:
+            self.chaptersFrame.downChapButton.clicked.connect(self.test)
+        if self.n == 2:
+            self.chaptersFrame.downChapButton.clicked.connect(self.test2)
+        self.n += 1
         for i in range(len(titles)):
             item = QListWidgetItem()
             item.setText(titles[i])
             item.setData(3,chapters[i])
             self.chaptersFrame.chapterList.addItem(item)
-        self.chaptersFrame.downChapButton.clicked.connect(lambda:self.selectedChapters(chapters,titles))
+        
     
-    def selectedChapters(self,chapters,titles):
-
+    def test(self,a):
+        print('Test Hello')
+    def test2(self,a):
+        print('Test Hello 2')
+    
+    def selectedChapters(self):
+        
         titles = [i.text() for i in self.chaptersFrame.chapterList.selectedItems()]
         links = [i.data(3) for i in self.chaptersFrame.chapterList.selectedItems()]
         self.mainStack.setCurrentIndex(3)
@@ -134,8 +158,10 @@ class MainWindow(QMainWindow):
     
     def downloadChaps(self,links,titles,n):
         pBar = self.addPBar(titles[n])
-        self.createThread()
-        self.thread.started.connect(lambda:self.worker.run(self.a,links[n]))
+        self.createThread(2)
+        self.worker.a = self.a
+        self.worker.link = links[n]
+        self.thread.started.connect(self.worker.download)
         self.worker.progress.connect(lambda a:pBar.setValue(a))
         if n < len(links)-1:
             self.thread.finished.connect(lambda:self.downloadChaps(links,titles,n+1))
@@ -151,11 +177,9 @@ class MainWindow(QMainWindow):
         label.setText(name)
         label.setWordWrap(True)
         horizontalLayout.addWidget(label)
-        progressBar = QProgressBar(parent=self.downloadsFrame.scrollAreaWidgetContents)
+        progressBar = QProgressBar(parent=self.downloadsFrame.scrollAreaWidgetContents,value=0)
         progressBar.setMinimumSize(QtCore.QSize(0, 25))
-        progressBar.setValue(0)
         progressBar.setMaximumSize(QtCore.QSize(16777215, 25))
-        progressBar.setProperty("value", 24)
         horizontalLayout.addWidget(progressBar)
         self.downloadsFrame.verticalLayout.addLayout(horizontalLayout)
         return progressBar
@@ -173,24 +197,27 @@ class MainWindow(QMainWindow):
         
     
     def listResults(self,page):
-        
         try:
             for i in self.navButtons:
                 self.searchFrame.horizontalLayout_2.removeWidget(i)
         except AttributeError:
             pass
-        self.mainStack.setCurrentIndex(2)
+        
         font = qtg.QFont()
         font.setPointSize(12)
         self.searchFrame.resultsList.setFont(font)
         self.navButtons = []
-        if self.a.lPage==0:
-            self.a.get_last_page(self.a.query)
-            if self.a.lPage == 0:
-                QtCore.QCoreApplication.instance().quit()
-        self.showPage(page)
+        self.createThread(4)
+        self.worker.a = self.a
+        self.thread.started.connect(self.worker.lastPage)
+        self.thread.finished.connect(lambda:self.showPage(1))
+        self.thread.start()
+            
 
     def showPage(self,page):
+        """if self.a.lPage == 0:
+            QtCore.QCoreApplication.instance().quit()"""
+        self.mainStack.setCurrentIndex(2)
         self.searchFrame.resultsList.clear()
         lPage = self.a.lPage
         minPage = page-2 if (page-2)>0 else 1
@@ -211,8 +238,6 @@ class MainWindow(QMainWindow):
         self.navButtons.append(navButton)
         self.searchFrame.horizontalLayout_2.addWidget(navButton)
         
-
-
         for i in range(minPage,maxPage+1):
             
             navButton = QPushButton(parent = self.searchFrame.navBar)
@@ -244,8 +269,9 @@ class MainWindow(QMainWindow):
         for n,comic in enumerate(self.a.searchResults[page]):
             if page not in self.a.imagePages:
                 self.a.imagePages[page]=[]
+            
             if n not in self.a.imagePages[page]:
-                self.a.img_download(comic[2],f'{page}_{n}','downloads/temp/')
+                #elf.a.img_download(comic[2],f'{page}_{n}','downloads/temp/')
                 self.a.imagePages[page].append(n)
             item = QListWidgetItem()
             icon = qtg.QIcon()
@@ -257,7 +283,6 @@ class MainWindow(QMainWindow):
             item.setData(3,comic[0])
             self.searchFrame.resultsList.addItem(item)
 
-        self.page = page
         self.searchFrame.resultsList.itemClicked.connect(self.comicSelected)
 
     def comicSelected(self,clickedItem):

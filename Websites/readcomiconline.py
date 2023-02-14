@@ -97,4 +97,3 @@ class readcomiconline(comic_site):
             for j in range(i*25,min(i*25+25,len(titles))):
                 cur_page_res.append(titles[j]) 
             search_results[i+1] = cur_page_res
-        return
