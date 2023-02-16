@@ -15,16 +15,50 @@
   </property>
   <layout class="QVBoxLayout" name="verticalLayout_2">
    <item>
-    <widget class="QProgressBar" name="mainProgressBar">
-     <property name="font">
-      <font>
-       <pointsize>12</pointsize>
-      </font>
+    <layout class="QHBoxLayout" name="horizontalLayout_4">
+     <property name="leftMargin">
+      <number>0</number>
      </property>
-     <property name="value">
-      <number>24</number>
+     <property name="rightMargin">
+      <number>0</number>
      </property>
-    </widget>
+     <item>
+      <widget class="QLabel" name="downloadNameLabel">
+       <property name="minimumSize">
+        <size>
+         <width>300</width>
+         <height>0</height>
+        </size>
+       </property>
+       <property name="font">
+        <font>
+         <pointsize>16</pointsize>
+        </font>
+       </property>
+       <property name="text">
+        <string>Loading...</string>
+       </property>
+       <property name="wordWrap">
+        <bool>true</bool>
+       </property>
+      </widget>
+     </item>
+     <item>
+      <widget class="QProgressBar" name="mainProgressBar">
+       <property name="enabled">
+        <bool>true</bool>
+       </property>
+       <property name="font">
+        <font>
+         <pointsize>12</pointsize>
+        </font>
+       </property>
+       <property name="value">
+        <number>0</number>
+       </property>
+      </widget>
+     </item>
+    </layout>
    </item>
    <item>
     <widget class="QScrollArea" name="comicDownloadFrame">
@@ -37,7 +71,7 @@
         <x>0</x>
         <y>0</y>
         <width>676</width>
-        <height>379</height>
+        <height>339</height>
        </rect>
       </property>
       <layout class="QVBoxLayout" name="verticalLayout">
@@ -47,6 +81,32 @@
       </layout>
      </widget>
     </widget>
+   </item>
+   <item>
+    <layout class="QHBoxLayout" name="horizontalLayout">
+     <item>
+      <widget class="QPushButton" name="downloadsHome">
+       <property name="enabled">
+        <bool>false</bool>
+       </property>
+       <property name="minimumSize">
+        <size>
+         <width>0</width>
+         <height>30</height>
+        </size>
+       </property>
+       <property name="maximumSize">
+        <size>
+         <width>100</width>
+         <height>30</height>
+        </size>
+       </property>
+       <property name="text">
+        <string>Home</string>
+       </property>
+      </widget>
+     </item>
+    </layout>
    </item>
   </layout>
  </widget>

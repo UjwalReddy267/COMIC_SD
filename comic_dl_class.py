@@ -32,6 +32,13 @@ class comic_site():
         title = re.sub('\s{2,}',' ',title)
         return title.strip()
 
+    def getTitle(self,link):
+        soup = self.get_soup(link) 
+        title = soup.find('title').get_text()
+        title = title.split(' ')
+        end = title.index('-')
+        title = " ".join(title[:end])
+        return title
 
     def comic_dl(self,link,progress):
         link = self.get_full_link(link)

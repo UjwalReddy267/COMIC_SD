@@ -68,8 +68,11 @@ class readcomiconline(comic_site):
         titles = [i.get_text() for i in a]
         #Get cover image
         cover_img = soup.find('div',{'class':'col cover'}).find('img').get('src')
-        self.img_download(self.site+cover_img,'cover','downloads/temp/')
-        return name,chapters,titles
+        if 'https:' not in cover_img:
+            cover_img = self.site+cover_img
+        self.img_download(cover_img,'cover','downloads/temp/')
+        self.chapters = [name,chapters,titles]
+
 
     def get_search_titles(self,link):
         soup = self.get_soup(link)

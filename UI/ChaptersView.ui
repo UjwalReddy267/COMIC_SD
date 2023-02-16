@@ -98,7 +98,7 @@
         </font>
        </property>
        <property name="text">
-        <string>TextLabel</string>
+        <string>Loading...</string>
        </property>
        <property name="wordWrap">
         <bool>true</bool>

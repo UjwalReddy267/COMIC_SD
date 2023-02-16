@@ -22,7 +22,7 @@ class comicextra(comic_site):
 
     def find_images(self,link):
         soup = self.get_soup(link)
-        title = soup.find_all('title')[0].get_text()
+        title = soup.find('title').get_text()
         title = self.format_title(title)
         img = soup.find_all('img',{"class":"chapter_img"})
         lnks = []
@@ -40,7 +40,8 @@ class comicextra(comic_site):
         #Get cover image
         cover_img = soup.find('div',{'class':'movie-l-img'}).find('img').get('src')
         self.img_download(cover_img,'cover','downloads/temp/')
-        return name,chapters,titles
+        self.chapters = [name,chapters,titles]
+    
     
     def no_results(self,soup):
         if len(soup.find_all('div',{'class':'general-nav'})) != 2:
