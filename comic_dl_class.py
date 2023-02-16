@@ -16,7 +16,8 @@ class comic_site():
     searchResults = {}
     query = ''
     lPage = 0
-    imagePages = {}
+    downloadedImages = {}
+
     def get_soup(self,link):
         r = requests.get(link)
         soup = BeautifulSoup(r.text,'html.parser')
