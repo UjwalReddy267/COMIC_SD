@@ -6,15 +6,11 @@ import sys
 from PyQt6.QtWidgets import QApplication
 import shutil 
 try:
-    try:
-        os.chdir(sys._MEIPASS)
-    except AttributeError:
-        pass
 
     if not os.path.exists('./downloads'):
-        os.mkdir('downloads')
+        os.mkdir('./downloads')
     if not os.path.exists('./downloads/temp'):
-        os.mkdir('downloads/temp')
+        os.mkdir('./downloads/temp')
     with open('log.txt','a') as log:
         log.write(str(datetime.now())+'\n')
 
@@ -22,7 +18,7 @@ try:
     window = MainWindow()
     window.start()
     app.exec()
-    shutil.rmtree('downloads/temp')
+    shutil.rmtree('./downloads/temp')
 
 except Exception as e:
     with open('log.txt','a') as f:
