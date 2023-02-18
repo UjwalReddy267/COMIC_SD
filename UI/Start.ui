@@ -13,6 +13,9 @@
   <property name="windowTitle">
    <string>Form</string>
   </property>
+  <property name="styleSheet">
+   <string notr="true"/>
+  </property>
   <layout class="QVBoxLayout" name="verticalLayout">
    <item>
     <spacer name="verticalSpacer">
@@ -37,8 +40,12 @@
      </property>
      <property name="font">
       <font>
-       <pointsize>18</pointsize>
+       <pointsize>20</pointsize>
       </font>
+     </property>
+     <property name="styleSheet">
+      <string notr="true">font-family:Helvetica;
+color:#ffffff;</string>
      </property>
      <property name="text">
       <string>Enter the name of a comic to search or paste the link to a comic to download</string>
@@ -97,13 +104,16 @@
          <pointsize>12</pointsize>
         </font>
        </property>
+       <property name="styleSheet">
+        <string notr="true"/>
+       </property>
       </widget>
      </item>
      <item>
       <widget class="QComboBox" name="siteSelector">
        <property name="minimumSize">
         <size>
-         <width>250</width>
+         <width>249</width>
          <height>30</height>
         </size>
        </property>
@@ -117,6 +127,15 @@
         <font>
          <pointsize>12</pointsize>
         </font>
+       </property>
+       <property name="focusPolicy">
+        <enum>Qt::WheelFocus</enum>
+       </property>
+       <property name="acceptDrops">
+        <bool>false</bool>
+       </property>
+       <property name="styleSheet">
+        <string notr="true"/>
        </property>
        <item>
         <property name="text">
@@ -174,8 +193,12 @@
        </property>
        <property name="font">
         <font>
-         <pointsize>12</pointsize>
+         <pointsize>9</pointsize>
         </font>
+       </property>
+       <property name="styleSheet">
+        <string notr="true">background-color:#ffffff;
+border-radius:3px;</string>
        </property>
        <property name="text">
         <string>GO!</string>

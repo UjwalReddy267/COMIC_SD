@@ -1,7 +1,7 @@
 from Websites.comicextra import comicextra
 from Websites.comiconline import comiconline
 from Websites.readcomiconline import readcomiconline
-from PyQt6.QtWidgets import *
+from PyQt6.QtWidgets import QWidget, QMainWindow, QVBoxLayout,QListWidgetItem, QPushButton, QHBoxLayout, QLabel, QProgressBar
 import PyQt6.QtGui as qtg
 from PyQt6 import uic,QtCore
 from PyQt6.QtCore import QObject, QThread, pyqtSignal, QEventLoop
@@ -48,7 +48,6 @@ class Worker(QObject):
 
     def __init__(self):
         super().__init__()
-        
         self._stop = False
 
 
@@ -105,7 +104,10 @@ class MainWindow(QMainWindow):
     page = 0
     def __init__(self):
         super().__init__()
-        self.setGeometry(350,100,800,500)
+        self.setGeometry(370,100,800,500)
+        font = qtg.QFont()
+        font.setStyleName('Helvetica')
+        self.setFont(font)
         self.fillStack()
 
     def fillStack(self):
@@ -119,11 +121,13 @@ class MainWindow(QMainWindow):
         self.verticalLayout = QVBoxLayout()
         self.stack = stack()
         self.verticalLayout.addWidget(self.stack)
+        self.verticalLayout.setContentsMargins(0,0,0,0)
         self.mainStack = self.stack.mainStack
         widget.setLayout(self.verticalLayout)
         
         self.homeButton = self.stack.homeButton
         self.downloadButton = self.stack.downloadButton
+        self.backButton = self.stack.backButton
         self.homeButton.clicked.connect(self.reset)
         
         self.startFrame = startFrame()
@@ -135,7 +139,15 @@ class MainWindow(QMainWindow):
         self.mainStack.addWidget(self.chaptersFrame)
         self.mainStack.addWidget(self.searchFrame)
         self.mainStack.addWidget(self.downloadsFrame)
+        self.setColors()
         self.show()  
+    
+    def setColors(self):
+        self.stack.setStyleSheet('#mainStack{background-color:#161A1D}#label{color:#FFFFFF;background-color:#650000}#frame{background-color:#650000}')
+        self.chaptersFrame.setStyleSheet('#chapterList{background-color:#A4161A}')
+        self.searchFrame.setStyleSheet('#resultsList{background-color:#A4161A}')
+        self.downloadsFrame.setStyleSheet('QProgressBar::chunk{background-color: rgb(255, 85, 0);}QProgressBar{text-align:center}#progressList{background-color:#A4161A}')
+
 
     def reset(self):
         for i in self.worker:
@@ -159,6 +171,7 @@ class MainWindow(QMainWindow):
         self.startFrame.goButton.clicked.connect(self.go)
         self.homeButton.hide()
         self.downloadButton.hide()
+        self.backButton.hide()
 
 
     def go(self):
@@ -191,13 +204,8 @@ class MainWindow(QMainWindow):
 
 
     def getChaps(self,link,back = False):
-        self.homeButton.hide()
-        self.chaptersFrame.backButton.setDisabled(True)
-        if back == False:
-            self.chaptersFrame.backButton.hide()
-        else:
-            #self.chaptersFrame.backButton.clicked.connect(lambda:self.mainStack.setCurrentIndex(2))
-            self.chaptersFrame.backButton.clicked.connect(lambda:self.showPage(self.page))
+        if back:
+            self.backButton.clicked.connect(lambda:self.showPage(self.page))
         self.chaptersFrame.chapterList.clear()
         self.chaptersFrame.comicNameLabel.setText('Loading...')
         self.chaptersFrame.coverImageLabel.clear()
@@ -212,30 +220,24 @@ class MainWindow(QMainWindow):
         self.worker[1].a = self.a
         self.worker[1].link = link
         self.thread[1].started.connect(self.worker[1].chapters)
-        self.worker[1].finished.connect(lambda:self.listChapters())
+        self.worker[1].finished.connect(lambda:self.listChapters(back))
         self.thread[1].start()
 
 
-    def listChapters(self):
-        self.chaptersFrame.backButton.setDisabled(False)
+    def listChapters(self,back):
+        if back:
+            self.backButton.show()
         self.homeButton.show()
-        #self.homeButton.show()
         name,chapters,titles = self.a.chapters
         #Check if button is connected
         try:
             self.downloadButton.clicked.disconnect()
-            #self.chaptersFrame.downChapButton.clicked.disconnect()
         except TypeError:
             pass
 
         a = self.a        
         self.chaptersFrame.coverImageLabel.setPixmap(qtg.QPixmap("downloads/temp/cover.jpg").scaled(self.chaptersFrame.coverImageLabel.size(),QtCore.Qt.AspectRatioMode.KeepAspectRatio,QtCore.Qt.TransformationMode.SmoothTransformation))
         self.chaptersFrame.comicNameLabel.setText(urllib.parse.unquote(name))
-
-        font = qtg.QFont()
-        font.setPointSize(12)
-        self.chaptersFrame.chapterList.setFont(font)
-        #self.chaptersFrame.downChapButton.clicked.connect(lambda:self.selectedChapters(name))
         self.downloadButton.show()
         self.downloadButton.clicked.connect(lambda:self.selectedChapters(name))
         
@@ -245,11 +247,11 @@ class MainWindow(QMainWindow):
             item.setText(titles[i])
             item.setData(3,chapters[i])
             self.chaptersFrame.chapterList.addItem(item)
-        #self.homeButton.clicked.connect(self.downloadButton.hide)
-        #self.homeButton.clicked.connect(self.homeButton.hide)
     
 
     def selectedChapters(self,name):
+        if not self.backButton.isHidden():
+            self.backButton.hide()
         titles = [i.text() for i in self.chaptersFrame.chapterList.selectedItems()]
         links = [i.data(3) for i in self.chaptersFrame.chapterList.selectedItems()]
         self.mainStack.setCurrentIndex(3)
@@ -293,16 +295,12 @@ class MainWindow(QMainWindow):
 
 
     def getLastPage(self):
-        
         try:
             for i in self.navButtons:
                 self.searchFrame.horizontalLayout_2.removeWidget(i)
         except AttributeError:
             pass
 
-        font = qtg.QFont()
-        font.setPointSize(12)
-        self.searchFrame.resultsList.setFont(font)
         self.navButtons = []
         self.imgUpPage = 0
         self.createThread(1)
@@ -377,7 +375,11 @@ class MainWindow(QMainWindow):
             self.searchItems = []
             item = QListWidgetItem()
             item.setText(comic[1])
+            brush = qtg.QBrush(qtg.QColor(255,255,255))
+            brush.setStyle(QtCore.Qt.BrushStyle.SolidPattern)
+            item.setForeground(brush)
             item.setData(3,comic[0])
+            #item.
             self.searchFrame.resultsList.addItem(item)
             self.addIcon(page,n,3)
 
@@ -442,19 +444,22 @@ class MainWindow(QMainWindow):
       
     def addPBar(self,name):
         horizontalLayout = QHBoxLayout()
-        label = QLabel(parent=self.downloadsFrame.scrollAreaWidgetContents)
+        label = QLabel(parent=self.downloadsFrame)
         label.setObjectName(name)
         label.setMinimumSize(QtCore.QSize(200, 25))
         label.setMaximumSize(QtCore.QSize(300, 25))
         label.setText(name)
         label.setWordWrap(True)
-        font = qtg.QFont()
-        font.setPointSize(12)
-        label.setFont(font)
         horizontalLayout.addWidget(label)
-        progressBar = QProgressBar(parent=self.downloadsFrame.scrollAreaWidgetContents,value=0)
+        progressBar = QProgressBar(parent=self.downloadsFrame,value=0)
         progressBar.setMinimumSize(QtCore.QSize(50, 25))
         progressBar.setMaximumSize(QtCore.QSize(300, 25))
+        progressBar.setStyleSheet('QProgressBar::chunk{background-color: rgb(255, 85, 0);}\nQProgressBar{text-align:center}')
         horizontalLayout.addWidget(progressBar)
-        self.downloadsFrame.verticalLayout.addLayout(horizontalLayout)
+        widget = QWidget()
+        widget.setLayout(horizontalLayout)
+        item = QListWidgetItem()
+        item.setSizeHint(QtCore.QSize(100,50))
+        self.downloadsFrame.progressList.addItem(item)
+        self.downloadsFrame.progressList.setItemWidget(item,widget)
         return progressBar

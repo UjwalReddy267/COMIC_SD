@@ -7,7 +7,7 @@
     <x>0</x>
     <y>0</y>
     <width>1166</width>
-    <height>575</height>
+    <height>558</height>
    </rect>
   </property>
   <property name="windowTitle">
@@ -26,9 +26,26 @@
        </property>
        <property name="maximumSize">
         <size>
-         <width>1000</width>
+         <width>1000000</width>
          <height>750</height>
         </size>
+       </property>
+       <property name="font">
+        <font>
+         <pointsize>16</pointsize>
+        </font>
+       </property>
+       <property name="styleSheet">
+        <string notr="true"/>
+       </property>
+       <property name="frameShape">
+        <enum>QFrame::NoFrame</enum>
+       </property>
+       <property name="verticalScrollMode">
+        <enum>QAbstractItemView::ScrollPerPixel</enum>
+       </property>
+       <property name="wordWrap">
+        <bool>true</bool>
        </property>
       </widget>
      </item>
