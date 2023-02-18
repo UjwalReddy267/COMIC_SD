@@ -9,14 +9,17 @@ from PyQt6.QtWidgets import *
 
 
 class comic_site():
-    bar_format = '{desc:40s}:{percentage:3.0f}%|{bar}|{n_fmt}/{total_fmt} [{elapsed}s, {rate_fmt}{postfix}]'
-    escapes = ''.join([chr(char) for char in range(1, 32)])
-    escapes+='/:?\\|*><\"\n'
-    translator = str.maketrans('', '', escapes)
-    searchResults = {}
-    query = ''
-    lPage = 0
-    downloadedImages = {}
+    
+
+    def __init__(self):
+        self.escapes = ''.join([chr(char) for char in range(1, 32)])
+        self.escapes+='/:?\\|*><\"\n'
+        self.translator = str.maketrans('', '', self.escapes)
+        self.searchResults = {}
+        self.query = ''
+        self.lPage = 0
+        self.downloadedImages = {}
+
 
     def get_soup(self,link):
         r = requests.get(link)

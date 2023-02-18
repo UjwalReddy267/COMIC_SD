@@ -10,6 +10,7 @@ class readcomiconline(comic_site):
     site = 'https://readcomiconline.li'
 
     def __init__(self,query):
+        super().__init__()
         self.query = query
         return
 

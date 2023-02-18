@@ -9,6 +9,7 @@ class comicextra(comic_site):
     lPage = 0
 
     def __init__(self,query):
+        super().__init__()
         self.query = query
         return
 

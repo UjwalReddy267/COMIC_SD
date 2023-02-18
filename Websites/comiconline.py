@@ -8,6 +8,7 @@ class comiconline(comic_site):
     
 
     def __init__(self,query):
+        super().__init__()
         self.query = query
         return
     

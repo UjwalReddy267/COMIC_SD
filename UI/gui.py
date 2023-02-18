@@ -9,36 +9,36 @@ import urllib.parse
 import sys
 
 try:
-    sys_path = sys._MEIPASS
+    sys_path = sys._MEIPASS+'\\'
 except AttributeError:
     sys_path = ''
 class startFrame(QWidget):
     def __init__(self,*args,**kwargs):
         super().__init__(*args,**kwargs)
-        uic.loadUi(sys_path+'\\UI\\start.ui',self)
+        uic.loadUi(sys_path+'UI\\start.ui',self)
 
 
 class chaptersFrame(QWidget):
     def __init__(self,*args,**kwargs):
         super().__init__(*args,**kwargs)
-        uic.loadUi(sys_path+'\\UI\\ChaptersView.ui',self)
+        uic.loadUi(sys_path+'UI\\ChaptersView.ui',self)
 
 
 class searchFrame(QWidget):
     def __init__(self,*args,**kwargs):
         super().__init__(*args,**kwargs)
-        uic.loadUi(sys_path+'\\UI\\searchResults.ui',self)
+        uic.loadUi(sys_path+'UI\\searchResults.ui',self)
 
 
 class downloadsFrame(QWidget):
     def __init__(self,*args,**kwargs):
         super().__init__(*args,**kwargs)
-        uic.loadUi(sys_path+'\\UI\\download.ui',self)
+        uic.loadUi(sys_path+'UI\\download.ui',self)
 
 class stack(QWidget):
     def __init__(self,*args,**kwargs):
         super().__init__(*args,**kwargs)
-        uic.loadUi(sys_path+'\\UI\\stack.ui',self)
+        uic.loadUi(sys_path+'UI\\stack.ui',self)
 
 
 class Worker(QObject):
@@ -105,11 +105,15 @@ class MainWindow(QMainWindow):
     page = 0
     def __init__(self):
         super().__init__()
-        self.thread = {}
-        self.worker = {}
+        self.setGeometry(350,100,800,500)
         self.fillStack()
 
     def fillStack(self):
+        self.thread = {}
+        self.worker = {}
+        self.navButtons = []
+        self.pageUpd = 0
+
         widget = QWidget(self)
         self.setCentralWidget(widget)
         self.verticalLayout = QVBoxLayout()
@@ -143,6 +147,8 @@ class MainWindow(QMainWindow):
                         eventLoop.processEvents()
             except RuntimeError:
                 pass
+
+        
         self.centralWidget().deleteLater
         self.fillStack()
         self.start()
@@ -275,6 +281,7 @@ class MainWindow(QMainWindow):
         site = self.startFrame.siteSelector.currentIndex()
         self.startFrame.siteSelector.setDisabled(True)
         self.startFrame.goButton.setDisabled(True)
+        self.homeButton.setDisabled(True)
         self.startFrame.startLabel.setText('Loading')
         if site == 0:
             self.a = readcomiconline(query)
@@ -282,17 +289,17 @@ class MainWindow(QMainWindow):
             self.a = comicextra(query)
         elif site == 2:
             self.a = comiconline(query)
-        self.listResults(1)
+        self.getLastPage()
 
 
-    def listResults(self,page):
+    def getLastPage(self):
+        
         try:
             for i in self.navButtons:
                 self.searchFrame.horizontalLayout_2.removeWidget(i)
         except AttributeError:
             pass
 
-        
         font = qtg.QFont()
         font.setPointSize(12)
         self.searchFrame.resultsList.setFont(font)
@@ -301,8 +308,9 @@ class MainWindow(QMainWindow):
         self.createThread(1)
         self.worker[1].a = self.a
         self.thread[1].started.connect(self.worker[1].lastPage)
-        self.thread[1].finished.connect(lambda:self.showPage(1))
         self.thread[1].finished.connect(self.getSearchResults)
+        self.thread[1].finished.connect(lambda:self.homeButton.setDisabled(False))
+        self.thread[1].finished.connect(lambda:self.showPage(1))
         self.thread[1].start()
 
 
@@ -321,6 +329,7 @@ class MainWindow(QMainWindow):
     
 
     def showPage(self,page):
+
         if not self.downloadButton.isHidden():
             self.downloadButton.hide()
         try:
@@ -340,7 +349,7 @@ class MainWindow(QMainWindow):
         #Calculate the indices of last and first nav buttons
         minPage = page-2 if (page-2)>0 else 1
         maxPage = minPage+4 if minPage+4<=lPage else lPage
-        minPage = maxPage-4 if maxPage-minPage<4 and maxPage-minPage>0 else minPage
+        minPage = maxPage-4 if maxPage-minPage<4 and maxPage-4>0 else minPage
         
         #Delete all nav buttons
         for i in self.navButtons:
@@ -410,7 +419,7 @@ class MainWindow(QMainWindow):
     def addIcon(self,page,index,called):
         if page == self.page:
             if page not in self.a.downloadedImages or (page in self.a.downloadedImages and index not in self.a.downloadedImages[page]):
-                path = sys_path+"\\UI\\load.png"
+                path = sys_path+"UI\\load.png"
             else:
                 path = f"downloads/temp/{page}_{index}.jpg"
             img = qtg.QPixmap(path)
@@ -436,13 +445,16 @@ class MainWindow(QMainWindow):
         label = QLabel(parent=self.downloadsFrame.scrollAreaWidgetContents)
         label.setObjectName(name)
         label.setMinimumSize(QtCore.QSize(200, 25))
-        label.setMaximumSize(QtCore.QSize(16777215, 25))
+        label.setMaximumSize(QtCore.QSize(300, 25))
         label.setText(name)
         label.setWordWrap(True)
+        font = qtg.QFont()
+        font.setPointSize(12)
+        label.setFont(font)
         horizontalLayout.addWidget(label)
         progressBar = QProgressBar(parent=self.downloadsFrame.scrollAreaWidgetContents,value=0)
-        progressBar.setMinimumSize(QtCore.QSize(0, 25))
-        progressBar.setMaximumSize(QtCore.QSize(16777215, 25))
+        progressBar.setMinimumSize(QtCore.QSize(50, 25))
+        progressBar.setMaximumSize(QtCore.QSize(300, 25))
         horizontalLayout.addWidget(progressBar)
         self.downloadsFrame.verticalLayout.addLayout(horizontalLayout)
         return progressBar
