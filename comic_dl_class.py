@@ -45,3 +45,8 @@ class comic_site():
         link = self.get_full_link(link)
         images,title = self.find_images(link)
         return images,title
+    
+    def img_download(self,src,name,path):
+        res = requests.get(src, stream = True)
+        with open(path+name+'.jpg','wb') as f:
+            shutil.copyfileobj(res.raw, f)
