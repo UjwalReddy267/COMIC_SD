@@ -1,12 +1,13 @@
 from Websites.comicextra import comicextra
 from Websites.comiconline import comiconline
 from Websites.readcomiconline import readcomiconline
-from PyQt6.QtWidgets import QWidget, QMainWindow, QVBoxLayout,QListWidgetItem, QPushButton, QHBoxLayout, QLabel, QProgressBar
+from PyQt6.QtWidgets import *
 import PyQt6.QtGui as qtg
 from PyQt6 import uic,QtCore
 from PyQt6.QtCore import QObject, QThread, pyqtSignal, QEventLoop
 import urllib.parse
 import sys
+import json
 
 try:
     sys_path = sys._MEIPASS+'\\'
@@ -104,7 +105,7 @@ class MainWindow(QMainWindow):
     page = 0
     def __init__(self):
         super().__init__()
-        self.setGeometry(370,100,800,500)
+        self.setGeometry(370,50,800,100)
         font = qtg.QFont()
         font.setStyleName('Helvetica')
         self.setFont(font)
@@ -143,10 +144,11 @@ class MainWindow(QMainWindow):
         self.show()  
     
     def setColors(self):
-        self.stack.setStyleSheet('#mainStack{background-color:#161A1D}#label{color:#FFFFFF;background-color:#650000}#frame{background-color:#650000}')
-        self.chaptersFrame.setStyleSheet('#chapterList{background-color:#A4161A}')
-        self.searchFrame.setStyleSheet('#resultsList{background-color:#A4161A}')
-        self.downloadsFrame.setStyleSheet('QProgressBar::chunk{background-color: rgb(255, 85, 0);}QProgressBar{text-align:center}#progressList{background-color:#A4161A}')
+        self.colors = json.load(open('colors.json'))
+        self.stack.setStyleSheet(self.colors['mainFrame'])
+        self.chaptersFrame.setStyleSheet(self.colors['chaptersView'])
+        self.searchFrame.setStyleSheet(self.colors['resultsView'])
+        self.downloadsFrame.setStyleSheet(self.colors['downloadsView']+self.colors['progressBar'])
 
 
     def reset(self):
@@ -211,11 +213,14 @@ class MainWindow(QMainWindow):
         self.chaptersFrame.coverImageLabel.clear()
         self.mainStack.setCurrentIndex(1)
         try:
+            eventLoop = QEventLoop()
             self.worker[1]._stop = True
+            print('Waiting')
             while self.thread[1].isRunning():
-                self.eventLoop.processEvents()
+                eventLoop.processEvents()
         except (RuntimeError,KeyError):
             pass
+        print('Done')
         self.createThread(1)
         self.worker[1].a = self.a
         self.worker[1].link = link
@@ -241,11 +246,14 @@ class MainWindow(QMainWindow):
         self.downloadButton.show()
         self.downloadButton.clicked.connect(lambda:self.selectedChapters(name))
         
-        
+        self.chaptersFrame.chapterList.setIconSize(QtCore.QSize(15,15))
         for i in range(len(titles)):
             item = QListWidgetItem()
             item.setText(titles[i])
             item.setData(3,chapters[i])
+            icon = qtg.QIcon()
+            icon.addPixmap(qtg.QPixmap(sys_path+'UI\\agenda.png'),qtg.QIcon.Mode.Active, qtg.QIcon.State.On)
+            item.setIcon(icon)
             self.chaptersFrame.chapterList.addItem(item)
     
 
@@ -327,14 +335,14 @@ class MainWindow(QMainWindow):
     
 
     def showPage(self,page):
-
+        if not self.backButton.isHidden():
+            self.backButton.hide()
         if not self.downloadButton.isHidden():
             self.downloadButton.hide()
         try:
             self.searchFrame.resultsList.itemClicked.disconnect()
         except TypeError:
             pass
-        self.eventLoop = QEventLoop()
         self.page = page
         if self.a.lPage == 0:
             #Quit if no results. Will add 404 page later
@@ -388,9 +396,10 @@ class MainWindow(QMainWindow):
             pass
         #Get images of search results
         try:
+            eventLoop = QEventLoop()
             self.worker[1]._stop = True
             while self.thread[1].isRunning():
-                self.eventLoop.processEvents()
+                eventLoop.processEvents()
         except RuntimeError:
             pass
 
@@ -425,7 +434,6 @@ class MainWindow(QMainWindow):
             else:
                 path = f"downloads/temp/{page}_{index}.jpg"
             img = qtg.QPixmap(path)
-            item = self.searchFrame.resultsList.item(index)
             icon = qtg.QIcon()
             icon.addPixmap(img, qtg.QIcon.Mode.Active, qtg.QIcon.State.On)
             self.searchFrame.resultsList.item(index).setIcon(icon)
@@ -450,12 +458,17 @@ class MainWindow(QMainWindow):
         label.setMaximumSize(QtCore.QSize(300, 25))
         label.setText(name)
         label.setWordWrap(True)
+        font = qtg.QFont()
+        font.setPointSize(12)
+        label.setFont(font)
         horizontalLayout.addWidget(label)
         progressBar = QProgressBar(parent=self.downloadsFrame,value=0)
         progressBar.setMinimumSize(QtCore.QSize(50, 25))
         progressBar.setMaximumSize(QtCore.QSize(300, 25))
-        progressBar.setStyleSheet('QProgressBar::chunk{background-color: rgb(255, 85, 0);}\nQProgressBar{text-align:center}')
+        progressBar.setStyleSheet(self.colors['progressBar'])
+        spacer  = QSpacerItem(40,20,QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Minimum)
         horizontalLayout.addWidget(progressBar)
+        horizontalLayout.addItem(spacer)
         widget = QWidget()
         widget.setLayout(horizontalLayout)
         item = QListWidgetItem()
