@@ -3,11 +3,14 @@ from Websites.comiconline import comiconline
 from Websites.readcomiconline import readcomiconline
 from PyQt6.QtWidgets import *
 import PyQt6.QtGui as qtg
-from PyQt6 import uic,QtCore
-from PyQt6.QtCore import QObject, QThread, pyqtSignal, QEventLoop
+from PyQt6 import uic
+from PyQt6.QtCore import *
 import urllib.parse
 import sys
 import json
+import requests
+import shutil
+from zipfile import ZipFile
 
 try:
     sys_path = sys._MEIPASS+'\\'
@@ -42,20 +45,58 @@ class stack(QWidget):
         uic.loadUi(sys_path+'UI\\stack.ui',self)
 
 
+class Runnable(QRunnable):
+    def __init__(self,links,n):
+        super().__init__()
+        self.n = n
+        self.links = links
+        self.progress = 0
+
+    def run(self):
+        for i,src in enumerate(self.links):
+            res = requests.get(src, stream = True)
+            with open('downloads/temp/'+str(self.n+i)+'.jpg','wb') as f:
+                shutil.copyfileobj(res.raw, f)
+            self.progress+=1
+
+
 class Worker(QObject):
     finished = pyqtSignal()
     progress = pyqtSignal(int)
     pagesProgress = pyqtSignal(int)
+    downloadProgress = pyqtSignal(int,int)
 
     def __init__(self):
         super().__init__()
         self._stop = False
 
-
     def download(self):
-        a = self.a
-        link = self.link
-        a.comic_dl(link,self.progress)
+        comics = self.comics
+        for n,comic in enumerate(comics):
+            images,title = self.a.comic_dl(comic)
+            threadCount = min(QThreadPool.globalInstance().maxThreadCount()//2,4)
+            pool = QThreadPool.globalInstance()
+            runnables = []
+            l = len(images)
+            t = threadCount
+            index = [i*(l//t)+min(i,l%t) for i in range(t+1)]
+            for i in range(threadCount):
+                runnable = Runnable(images[index[i]:index[i+1]],index[i])
+                runnables.append(runnable)
+                pool.start(runnable)
+            progress = 0
+            while progress<100:
+                progress = 0
+                for runnable in runnables:
+                    progress += runnable.progress
+                progress = (100*progress)//len(images)
+                self.downloadProgress.emit(n,progress)
+            fil = ZipFile('downloads/'+title+'.cbr','w')
+            for i in range(len(images)):
+                fil.write('downloads/temp/'+str(i)+'.jpg')
+            fil.close()
+            self.progress.emit(100*(i+1)//len(images))
+            self.progress.emit(100*(n+1)//len(comics))
         self.finished.emit()
 
 
@@ -66,7 +107,7 @@ class Worker(QObject):
 
     def search(self):
         for i in range(1,self.a.lPage+1):
-            if not self._stop:
+            if self._stop:
                 break
             if i not in self.a.searchResults.keys():
                 self.a.get_search_titles(i)
@@ -84,6 +125,8 @@ class Worker(QObject):
         page = self.page
         if page not in self.a.downloadedImages:
             self.a.downloadedImages[page] = []
+        while page not in self.a.searchResults:
+            pass
         for i in range(len(self.a.searchResults[page])):
             if self._stop:
                 break
@@ -91,7 +134,6 @@ class Worker(QObject):
                 self.a.img_download(self.a.searchResults[page][i][2],f'{page}_{i}','downloads/temp/')
                 self.a.downloadedImages[page].append(i)
             self.progress.emit(i)
-
         if emit == True:
             self.finished.emit()
             
@@ -215,12 +257,10 @@ class MainWindow(QMainWindow):
         try:
             eventLoop = QEventLoop()
             self.worker[1]._stop = True
-            print('Waiting')
             while self.thread[1].isRunning():
                 eventLoop.processEvents()
         except (RuntimeError,KeyError):
             pass
-        print('Done')
         self.createThread(1)
         self.worker[1].a = self.a
         self.worker[1].link = link
@@ -241,12 +281,12 @@ class MainWindow(QMainWindow):
             pass
 
         a = self.a        
-        self.chaptersFrame.coverImageLabel.setPixmap(qtg.QPixmap("downloads/temp/cover.jpg").scaled(self.chaptersFrame.coverImageLabel.size(),QtCore.Qt.AspectRatioMode.KeepAspectRatio,QtCore.Qt.TransformationMode.SmoothTransformation))
+        self.chaptersFrame.coverImageLabel.setPixmap(qtg.QPixmap("downloads/temp/cover.jpg").scaled(self.chaptersFrame.coverImageLabel.size(),Qt.AspectRatioMode.KeepAspectRatio,Qt.TransformationMode.SmoothTransformation))
         self.chaptersFrame.comicNameLabel.setText(urllib.parse.unquote(name))
         self.downloadButton.show()
         self.downloadButton.clicked.connect(lambda:self.selectedChapters(name))
         
-        self.chaptersFrame.chapterList.setIconSize(QtCore.QSize(15,15))
+        self.chaptersFrame.chapterList.setIconSize(QSize(15,15))
         for i in range(len(titles)):
             item = QListWidgetItem()
             item.setText(titles[i])
@@ -264,28 +304,31 @@ class MainWindow(QMainWindow):
         links = [i.data(3) for i in self.chaptersFrame.chapterList.selectedItems()]
         self.mainStack.setCurrentIndex(3)
         self.downloadsFrame.downloadNameLabel.setText(name)
-        self.downloadChaps(links,titles,0)
+        self.downloadChaps(links,titles)
     
 
-    def downloadChaps(self,links,titles=None,n=0,set_pbar=True):
+    def downloadChaps(self,links,titles=None,set_pbar=True):
         self.homeButton.hide()
         self.downloadButton.hide()
+        pBars = []
         if set_pbar:
-            pBar = self.addPBar(titles[n])
+            for i in range(len(links)):
+                pBars.append(self.addPBar(titles[i]))
         else:
-            pBar = self.downloadsFrame.mainProgressBar
+            pBars.append(self.downloadsFrame.mainProgressBar)
+        eventLoop = QEventLoop()
+        if 2 in self.worker:
+            self.worker[2]._stop = True
+            while self.thread[2].isRunning():
+                eventLoop.processEvents()
         self.createThread(1)
         self.worker[1].a = self.a
-        self.worker[1].link = links[n]
+        self.worker[1].comics = links
+        self.worker[1].downloadProgress.connect(lambda i,n:pBars[i].setValue(n))
+        self.worker[1].progress.connect(lambda i:self.downloadsFrame.mainProgressBar.setValue(i))
         self.thread[1].started.connect(self.worker[1].download)
-        self.worker[1].progress.connect(lambda a:pBar.setValue(a))
-        if n < len(links)-1:
-            self.thread[1].finished.connect(lambda:self.downloadChaps(links,titles,n+1))
-        if n==len(links)-1:
-            self.thread[1].finished.connect(self.homeButton.show)
-        self.thread[1].finished.connect(lambda:self.downloadsFrame.mainProgressBar.setValue(int(100*(n+1)/len(links))))        
         self.thread[1].start()
-
+        self.worker[1].finished.connect(self.homeButton.show)
 
     def search(self,query):
         site = self.startFrame.siteSelector.currentIndex()
@@ -329,6 +372,7 @@ class MainWindow(QMainWindow):
         self.worker[2].progress.connect(lambda index:self.addIcon(self.pageUpd,index,1))
         self.thread[2].start()
     
+    
 
     def updImgInd(self,n):
         self.pageUpd = n
@@ -346,7 +390,7 @@ class MainWindow(QMainWindow):
         self.page = page
         if self.a.lPage == 0:
             #Quit if no results. Will add 404 page later
-            QtCore.QCoreApplication.instance().quit()
+            QCoreApplication.instance().quit()
         #Change to results page
         self.mainStack.setCurrentIndex(2)
         #Clear results
@@ -384,7 +428,7 @@ class MainWindow(QMainWindow):
             item = QListWidgetItem()
             item.setText(comic[1])
             brush = qtg.QBrush(qtg.QColor(255,255,255))
-            brush.setStyle(QtCore.Qt.BrushStyle.SolidPattern)
+            brush.setStyle(Qt.BrushStyle.SolidPattern)
             item.setForeground(brush)
             item.setData(3,comic[0])
             #item.
@@ -419,8 +463,8 @@ class MainWindow(QMainWindow):
     def addNavButton(self,text,page,disabled):
         navButton = QPushButton(parent = self.searchFrame.navBar)
         navButton.setText(text)
-        navButton.setMinimumSize(QtCore.QSize(30,30))
-        navButton.setMaximumSize(QtCore.QSize(30,30))
+        navButton.setMinimumSize(QSize(30,30))
+        navButton.setMaximumSize(QSize(30,30))
         navButton.clicked.connect(lambda :self.showPage(page))
         navButton.setDisabled(disabled)
         self.navButtons.append(navButton)
@@ -437,7 +481,7 @@ class MainWindow(QMainWindow):
             icon = qtg.QIcon()
             icon.addPixmap(img, qtg.QIcon.Mode.Active, qtg.QIcon.State.On)
             self.searchFrame.resultsList.item(index).setIcon(icon)
-            size = QtCore.QSize(100,100)
+            size = QSize(100,100)
             self.searchFrame.resultsList.setIconSize(size)
 
 
@@ -454,8 +498,8 @@ class MainWindow(QMainWindow):
         horizontalLayout = QHBoxLayout()
         label = QLabel(parent=self.downloadsFrame)
         label.setObjectName(name)
-        label.setMinimumSize(QtCore.QSize(200, 25))
-        label.setMaximumSize(QtCore.QSize(300, 25))
+        label.setMinimumSize(QSize(200, 25))
+        label.setMaximumSize(QSize(300, 25))
         label.setText(name)
         label.setWordWrap(True)
         font = qtg.QFont()
@@ -463,8 +507,8 @@ class MainWindow(QMainWindow):
         label.setFont(font)
         horizontalLayout.addWidget(label)
         progressBar = QProgressBar(parent=self.downloadsFrame,value=0)
-        progressBar.setMinimumSize(QtCore.QSize(50, 25))
-        progressBar.setMaximumSize(QtCore.QSize(300, 25))
+        progressBar.setMinimumSize(QSize(50, 25))
+        progressBar.setMaximumSize(QSize(300, 25))
         progressBar.setStyleSheet(self.colors['progressBar'])
         spacer  = QSpacerItem(40,20,QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Minimum)
         horizontalLayout.addWidget(progressBar)
@@ -472,7 +516,7 @@ class MainWindow(QMainWindow):
         widget = QWidget()
         widget.setLayout(horizontalLayout)
         item = QListWidgetItem()
-        item.setSizeHint(QtCore.QSize(100,50))
+        item.setSizeHint(QSize(100,50))
         self.downloadsFrame.progressList.addItem(item)
         self.downloadsFrame.progressList.setItemWidget(item,widget)
         return progressBar

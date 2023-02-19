@@ -4,13 +4,10 @@ from zipfile import ZipFile
 from tqdm.auto import tqdm
 import re
 import shutil
-import time
 from PyQt6.QtWidgets import *
 
 
 class comic_site():
-    
-
     def __init__(self):
         self.escapes = ''.join([chr(char) for char in range(1, 32)])
         self.escapes+='/:?\\|*><\"\n'
@@ -43,20 +40,8 @@ class comic_site():
         title = " ".join(title[:end])
         return title
 
-    def comic_dl(self,link,progress):
+    def comic_dl(self,link):
+        print('Comic_DL')
         link = self.get_full_link(link)
         images,title = self.find_images(link)
-        fil = ZipFile('downloads/'+title+'.cbr','w')
-        for i,image in enumerate(images):
-            self.img_download(image,str(i),path='downloads/temp/')
-            fil.write('downloads/temp/'+str(i)+'.jpg')
-            progress.emit(100*(i+1)//len(images))
-        fil.close()
-
-
-
-    def img_download(self,src,name,path=''):
-        res = requests.get(src, stream = True)
-
-        with open(path+name+'.jpg','wb') as f:
-            shutil.copyfileobj(res.raw, f)
+        return images,title
