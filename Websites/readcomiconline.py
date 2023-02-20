@@ -31,11 +31,13 @@ class readcomiconline(comic_site):
 
     def find_images(self,link):
         soup = self.get_soup(link)
+        if soup == None:
+            return -1,None,None
         title = soup.find('title').get_text()
         title = self.format_title(title)
         enc = re.findall(r"lstImages.push\([\'|\"](.*?)[\'|\"]\);", str(soup))
         lnks = self.decode_images(enc)
-        return lnks,title
+        return 1,lnks,title
 
     def decode_images(self,enc):
         for i in range(len(enc)):
@@ -62,6 +64,8 @@ class readcomiconline(comic_site):
 
     def get_chaps(self,link):
         soup = self.get_soup(link)
+        if soup == None:
+            return -1
         name = soup.find('div',{'class':'heading'}).get_text()
         table = soup.find('ul',{"class":"list"})
         a = table.find_all("a")
@@ -73,27 +77,30 @@ class readcomiconline(comic_site):
             cover_img = self.site+cover_img
         self.img_download(cover_img,'cover','downloads/temp/')
         self.chapters = [name,chapters,titles]
+        return 1
 
 
     def get_search_titles(self,link):
         soup = self.get_soup(link)
+        if soup == None:
+            return -1, None
         titles = []
         table = soup.find_all('div',{'class':'col cover'})
         if table == []:
-            return None
+            return 0, None
         for n,box in enumerate(table):
             imgLink = box.find('img').get('src')
             if 'https' not in imgLink:
                 imgLink = self.site+imgLink
             titles.append([self.site+box.find('a').get('href'),box.find('img').get('title'),imgLink])
-        return titles
+        return 1,titles
 
     def get_last_page(self,search_term):
         search_results = self.searchResults
 
-        titles = self.get_search_titles(self.search_link+search_term)
-        if titles == None:
-            return 0
+        err,titles = self.get_search_titles(self.search_link+search_term)
+        if err != 1:
+            return err
 
         self.lPage = len(titles)//25 + (0 if len(titles)%25==0 else 1)
         for i in range(self.lPage):
@@ -101,3 +108,4 @@ class readcomiconline(comic_site):
             for j in range(i*25,min(i*25+25,len(titles))):
                 cur_page_res.append(titles[j]) 
             search_results[i+1] = cur_page_res
+        return 1

@@ -13,9 +13,12 @@ try:
         os.mkdir('./downloads/temp')
     with open('log.txt','a') as log:
         log.write(str(datetime.now())+'\n')
+    json = None
+    if os.path.exists('./colors.json'):
+        json = './colors.json'
 
     app = QApplication(sys.argv)
-    window = MainWindow()
+    window = MainWindow(json)
     window.start()
     app.exec()
     shutil.rmtree('./downloads/temp')

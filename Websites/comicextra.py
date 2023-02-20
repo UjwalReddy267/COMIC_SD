@@ -23,16 +23,20 @@ class comicextra(comic_site):
 
     def find_images(self,link):
         soup = self.get_soup(link)
+        if soup == None:
+            return -1,None,None
         title = soup.find('title').get_text()
         title = self.format_title(title)
         img = soup.find_all('img',{"class":"chapter_img"})
         lnks = []
         for i in img:
             lnks.append(i['src'])
-        return lnks,title
+        return 1,lnks,title
 
     def get_chaps(self,link):
         soup = self.get_soup(link)
+        if soup == None:
+            return -1
         name = soup.find('span',{'class':'list-top-movie-item-vn'}).get_text()
         chap_list = soup.find('tbody',{"id":"list"})
         a = chap_list.find_all("a")
@@ -42,6 +46,7 @@ class comicextra(comic_site):
         cover_img = soup.find('div',{'class':'movie-l-img'}).find('img').get('src')
         self.img_download(cover_img,'cover','downloads/temp/')
         self.chapters = [name,chapters,titles]
+        return 1
     
     
     def no_results(self,soup):
@@ -53,18 +58,23 @@ class comicextra(comic_site):
         titles = []
         link = self.search_link+self.query+'&page='+str(page)
         soup = self.get_soup(link)
+        if soup == None:
+            return -1
         table = soup.find_all('div',{'class':'cartoon-box'})
-        if table == []: return None
+        if table == []: return 0
         for n,box in enumerate(table):
             imgLink = box.find('img').get('src')
             titles.append([box.find_all('a')[0].get('href'),box.find_all('a')[1].get_text(),imgLink])
         self.searchResults[page] = titles
+        return 1
 
     def get_last_page(self,search_term):     
         self.lPage = 1
 
         while 1:
             soup = self.get_soup(self.search_link+search_term+'&page='+str(self.lPage))
+            if soup == None:
+                return None
             text = soup.find_all('div',{'class','general-nav'})[-1]
             try:
                 last = text.find_all('a')[-1].get_text()
@@ -72,7 +82,9 @@ class comicextra(comic_site):
                     self.lPage = 0
                     return
             except IndexError:
-                self.get_search_titles(self.lPage)
+                err = self.get_search_titles(self.lPage)
+                if err!=1:
+                    return err
                 self.lPage = 1
                 return
             self.get_search_titles(self.lPage)
@@ -80,6 +92,7 @@ class comicextra(comic_site):
                 self.lPage = int(text.find_all('a')[-2].get_text())
             else:
                 break
+        return 1
 
 
 
