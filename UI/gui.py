@@ -444,7 +444,7 @@ class MainWindow(QMainWindow):
         for i in range(minPage,maxPage+1):
             if i==page:
                 self.addNavButton(str(i),i,True)
-        else:
+            else:
                 self.addNavButton(str(i),i,False)
         #Add >> button
         if page==lPage:
