@@ -11,6 +11,7 @@ import json
 import requests
 import shutil
 from zipfile import ZipFile
+import time
 
 try:
     sys_path = sys._MEIPASS+'\\'
@@ -114,7 +115,9 @@ class Worker(QObject):
     def search(self):
         for i in range(1,self.a.lPage+1):
             if self._stop:
-                break
+                self.finished.emit()
+                return
+
             if i not in self.a.searchResults.keys():
                 err = self.a.get_search_titles(i)
                 if err != 1:
@@ -122,7 +125,8 @@ class Worker(QObject):
                     return
         for i in range(1,self.a.lPage+1):
             if self._stop:
-                break
+                self.finished.emit()
+                return
             if i not in self.a.downloadedImages:
                 self.page = i
                 self.searchPageImages(False)
@@ -138,7 +142,9 @@ class Worker(QObject):
             pass
         for i in range(len(self.a.searchResults[page])):
             if self._stop:
-                break
+                if emit:
+                    self.finished.emit()
+                return
             if i not in self.a.downloadedImages[page]:
                 err = self.a.img_download(self.a.searchResults[page][i][2],f'{page}_{i}','downloads/temp/')
                 if err == -1:
@@ -190,7 +196,9 @@ class MainWindow(QMainWindow):
         self.homeButton = self.stack.homeButton
         self.downloadButton = self.stack.downloadButton
         self.backButton = self.stack.backButton
+        self.homeButton.clicked.connect(lambda:self.mainStack.setCurrentIndex(0))
         self.homeButton.clicked.connect(self.reset)
+        self.homeButton.clicked.connect(self.homeButton.hide())
         
         self.startFrame = startFrame()
         self.chaptersFrame = chaptersFrame()
@@ -214,15 +222,13 @@ class MainWindow(QMainWindow):
 
     def reset(self):
         self.centralWidget().deleteLater()
-        for i in self.worker:
-            try:
-                if i in self.worker:
-                    eventLoop = QEventLoop()
-                    self.worker[i]._stop = True
-                    while self.thread[i].isRunning():
-                        eventLoop.processEvents()
-            except RuntimeError:
-                pass
+        keys = list(self.worker.keys())
+        for i in keys:
+            eventLoop = QEventLoop()
+            self.worker[i]._stop = True
+            while self.thread[i].isRunning():
+                eventLoop.processEvents()
+                time.sleep(0.1)
         self.fillStack()
         self.start()
 
@@ -242,6 +248,7 @@ class MainWindow(QMainWindow):
             self.startFrame.queryField.setDisabled(True)
             self.startFrame.startLabel.setText('Select a website')
             self.startFrame.siteSelector.show()
+            self.startFrame.goButton.clicked.connect(lambda:self.startFrame.goButton.setDisabled(True))
             self.startFrame.goButton.clicked.connect(lambda:self.search(query))
         else:
             self.parseLink(query)
@@ -268,28 +275,29 @@ class MainWindow(QMainWindow):
 
 
     def getChaps(self,link,back = False):
+        self.homeButton.setDisabled(True)
         if back:
             self.backButton.clicked.connect(lambda:self.showPage(self.page))
         self.chaptersFrame.chapterList.clear()
         self.chaptersFrame.comicNameLabel.setText('Loading...')
         self.chaptersFrame.coverImageLabel.clear()
         self.mainStack.setCurrentIndex(1)
-        try:
-            eventLoop = QEventLoop()
+        eventLoop = QEventLoop()
+        if 1 in self.worker:
             self.worker[1]._stop = True
             while self.thread[1].isRunning():
                 eventLoop.processEvents()
-        except (RuntimeError,KeyError):
-            pass
+                time.sleep(0.1)
         self.createThread(1)
         self.worker[1].a = self.a
         self.worker[1].link = link
         self.thread[1].started.connect(self.worker[1].chapters)
-        self.worker[1].finished.connect(lambda:self.listChapters(back))
+        self.thread[1].finished.connect(lambda:self.listChapters(back))
         self.thread[1].start()
 
 
     def listChapters(self,back):
+        self.homeButton.setDisabled(False)
         if back:
             self.backButton.show()
         self.homeButton.show()
@@ -298,9 +306,7 @@ class MainWindow(QMainWindow):
         try:
             self.downloadButton.clicked.disconnect()
         except TypeError:
-            pass
-
-        a = self.a        
+            pass    
         self.chaptersFrame.coverImageLabel.setPixmap(qtg.QPixmap("downloads/temp/cover.jpg").scaled(self.chaptersFrame.coverImageLabel.size(),Qt.AspectRatioMode.KeepAspectRatio,Qt.TransformationMode.SmoothTransformation))
         self.chaptersFrame.comicNameLabel.setText(urllib.parse.unquote(name))
         self.downloadButton.show()
@@ -337,13 +343,10 @@ class MainWindow(QMainWindow):
         else:
             pBars.append(self.downloadsFrame.mainProgressBar)
         eventLoop = QEventLoop()
-        try:
-            if 2 in self.worker:
-                self.worker[2]._stop = True
-                while self.thread[2].isRunning():
-                    eventLoop.processEvents()
-        except RuntimeError:
-            pass
+        if 2 in self.worker:
+            self.worker[2]._stop = True
+            while self.thread[2].isRunning():
+                eventLoop.processEvents()
         self.createThread(1)
         self.worker[1].a = self.a
         self.worker[1].comics = links
@@ -357,9 +360,11 @@ class MainWindow(QMainWindow):
     def search(self,query):
         site = self.startFrame.siteSelector.currentIndex()
         self.startFrame.siteSelector.setDisabled(True)
-        self.startFrame.goButton.setDisabled(True)
         self.homeButton.setDisabled(True)
         self.startFrame.startLabel.setText('Loading...')
+        self.startFrame.siteSelector.hide()
+        self.startFrame.queryField.hide()
+        self.startFrame.goButton.hide()
         if site == 0:
             self.a = readcomiconline(query)
         elif site == 1:
@@ -370,12 +375,11 @@ class MainWindow(QMainWindow):
 
 
     def getLastPage(self):
-        try:
+        """try:
             for i in self.navButtons:
                 self.searchFrame.horizontalLayout_2.removeWidget(i)
         except AttributeError:
-            pass
-
+            pass"""
         self.navButtons = []
         self.imgUpPage = 0
         self.createThread(1)
@@ -383,7 +387,7 @@ class MainWindow(QMainWindow):
         self.thread[1].started.connect(self.worker[1].lastPage)
         self.thread[1].finished.connect(self.getSearchResults)
         self.thread[1].finished.connect(lambda:self.homeButton.setDisabled(False))
-        self.worker[1].finished.connect(self.showPage)
+        self.thread[1].finished.connect(self.showPage)
         self.thread[1].start()
 
 
@@ -407,33 +411,16 @@ class MainWindow(QMainWindow):
             self.backButton.hide()
         if not self.downloadButton.isHidden():
             self.downloadButton.hide()
-        try:
-            self.searchFrame.resultsList.itemClicked.disconnect()
-        except TypeError:
-            pass
-        try:
-            eventLoop = QEventLoop()
-            self.worker[1]._stop = True
-            i=0
-            while self.thread[1].isRunning():
-                eventLoop.processEvents()
-                i+=1
-                print(f'Waiting:{i}')
-        except RuntimeError:
-            pass
+        
         self.page = page
         #Change to results page
         self.mainStack.setCurrentIndex(2)
-        #Clear results
-        self.searchFrame.resultsList.clear()
-        lPage = self.a.lPage
         #Calculate the indices of last and first nav buttons
-        minPage = page-2 if (page-2)>0 else 1
-        maxPage = minPage+4 if minPage+4<=lPage else lPage
-        minPage = maxPage-4 if maxPage-minPage<4 and maxPage-4>0 else minPage
+        minPage = max(page-2,1) if max(page-2,1)+4<self.a.lPage else self.a.lPage-4
+        maxPage = minPage+4
         #Delete all nav buttons
         for i in self.navButtons:
-            self.searchFrame.horizontalLayout_2.removeWidget(i)
+            self.searchFrame.horizontalLayout_2.removeWidget(i[0])
         self.navButtons = []
         #Add << button
         if page==1:
@@ -447,10 +434,16 @@ class MainWindow(QMainWindow):
             else:
                 self.addNavButton(str(i),i,False)
         #Add >> button
-        if page==lPage:
-            self.addNavButton('>>',lPage,True)
+        if page==self.a.lPage:
+            self.addNavButton('>>',self.a.lPage,True)
         else:
-            self.addNavButton('>>',lPage,False)
+            self.addNavButton('>>',self.a.lPage,False)
+        if self.searchFrame.navBar.isHidden():
+            self.searchFrame.navBar.show()
+        
+        while page not in self.a.searchResults.keys():
+            pass
+
         #Add search results
         for n,comic in enumerate(self.a.searchResults[page]):
             self.searchItems = []
@@ -460,12 +453,12 @@ class MainWindow(QMainWindow):
             brush.setStyle(Qt.BrushStyle.SolidPattern)
             item.setForeground(brush)
             item.setData(3,comic[0])
-            #item.
             self.searchFrame.resultsList.addItem(item)
             self.addIcon(page,n,3)
-        #Wait for search results of page
-        while page not in self.a.searchResults.keys():
-            pass
+        
+        self.searchFrame.resultsList.itemClicked.connect(lambda:self.mainStack.setCurrentIndex(1))
+        self.searchFrame.resultsList.itemClicked.connect(self.comicSelected)
+
         #Get images of search results
         if page not in self.a.downloadedImages or (page in self.a.downloadedImages and len(self.a.downloadedImages[page])!=self.a.searchResults[page]):
             self.createThread(1)
@@ -474,8 +467,20 @@ class MainWindow(QMainWindow):
             self.thread[1].started.connect(self.worker[1].searchPageImages)
             self.worker[1].progress.connect(lambda index:self.addIcon(page,index,2))
             self.thread[1].start()
-        self.searchFrame.resultsList.itemClicked.connect(self.comicSelected)
+        
 
+    def clearPage(self,page):
+        for button,mode in self.navButtons:
+            button.setDisabled(True)
+        eventLoop = QEventLoop()
+        if 1 in self.worker:
+            self.worker[1]._stop = True
+            while self.thread[1].isRunning():
+                eventLoop.processEvents()
+                time.sleep(0.1)
+        self.searchFrame.resultsList.clear()
+        self.searchFrame.resultsList.resetVerticalScrollMode()
+        self.showPage(page)
 
     def comicSelected(self,clickedItem):
         self.getChaps(clickedItem.data(3),back=True)
@@ -486,9 +491,10 @@ class MainWindow(QMainWindow):
         navButton.setText(text)
         navButton.setMinimumSize(QSize(30,30))
         navButton.setMaximumSize(QSize(30,30))
-        navButton.clicked.connect(lambda :self.showPage(page))
+        navButton.clicked.connect(lambda :self.clearPage(page))
         navButton.setDisabled(disabled)
-        self.navButtons.append(navButton)
+        navButton.clicked.connect(self.searchFrame.navBar.hide)
+        self.navButtons.append([navButton,disabled])
         self.searchFrame.horizontalLayout_2.addWidget(navButton)
 
 
@@ -513,6 +519,7 @@ class MainWindow(QMainWindow):
         self.worker[n].finished.connect(self.thread[n].quit)
         self.thread[n].finished.connect(self.thread[n].deleteLater)
         self.worker[n].finished.connect(self.worker[n].deleteLater)
+        self.worker[n].finished.connect(lambda i=n:self.worker.pop(i))
         self.worker[n].error.connect(self.handleError)
         self.worker[n].error.connect(self.thread[n].quit)
 

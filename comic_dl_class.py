@@ -43,7 +43,6 @@ class comic_site():
         return 1,title.strip()
 
     def comic_dl(self,link):
-        print('Comic_DL')
         link = self.get_full_link(link)
         err,images,title = self.find_images(link)
         return err,images,title
