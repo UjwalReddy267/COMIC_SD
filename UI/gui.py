@@ -117,7 +117,6 @@ class Worker(QObject):
             if self._stop:
                 self.finished.emit()
                 return
-
             if i not in self.a.searchResults.keys():
                 err = self.a.get_search_titles(i)
                 if err != 1:
@@ -152,7 +151,7 @@ class Worker(QObject):
                     return
                 self.a.downloadedImages[page].append(i)
             self.progress.emit(i)
-        if emit == True:
+        if emit:
             self.finished.emit()
             
 
@@ -197,8 +196,9 @@ class MainWindow(QMainWindow):
         self.downloadButton = self.stack.downloadButton
         self.backButton = self.stack.backButton
         self.homeButton.clicked.connect(lambda:self.mainStack.setCurrentIndex(0))
+        self.homeButton.clicked.connect(lambda:self.homeButton.hide())
         self.homeButton.clicked.connect(self.reset)
-        self.homeButton.clicked.connect(self.homeButton.hide())
+         
         
         self.startFrame = startFrame()
         self.chaptersFrame = chaptersFrame()
@@ -215,9 +215,10 @@ class MainWindow(QMainWindow):
     def setColors(self):
         self.colors = json.load(open(self.json))
         self.stack.setStyleSheet(self.colors['mainFrame'])
+        self.downloadsFrame.setStyleSheet(self.colors['startFrame'])
         self.chaptersFrame.setStyleSheet(self.colors['chaptersView'])
         self.searchFrame.setStyleSheet(self.colors['resultsView'])
-        self.downloadsFrame.setStyleSheet(self.colors['downloadsView']+self.colors['progressBar'])
+        self.downloadsFrame.setStyleSheet(self.colors['downloadsView']+self.colors['mainProgressBar'])
 
 
     def reset(self):
@@ -261,7 +262,7 @@ class MainWindow(QMainWindow):
             self.a = comiconline(query)
         elif 'readcomiconline' in query:
             self.a = readcomiconline(query)
-        
+
         if self.a.is_chap_list(query):
             self.getChaps(query)
         else:
@@ -277,7 +278,7 @@ class MainWindow(QMainWindow):
     def getChaps(self,link,back = False):
         self.homeButton.setDisabled(True)
         if back:
-            self.backButton.clicked.connect(lambda:self.showPage(self.page))
+            self.backButton.clicked.connect(lambda:self.clearPage(self.page))
         self.chaptersFrame.chapterList.clear()
         self.chaptersFrame.comicNameLabel.setText('Loading...')
         self.chaptersFrame.coverImageLabel.clear()
@@ -375,13 +376,7 @@ class MainWindow(QMainWindow):
 
 
     def getLastPage(self):
-        """try:
-            for i in self.navButtons:
-                self.searchFrame.horizontalLayout_2.removeWidget(i)
-        except AttributeError:
-            pass"""
         self.navButtons = []
-        self.imgUpPage = 0
         self.createThread(1)
         self.worker[1].a = self.a
         self.thread[1].started.connect(self.worker[1].lastPage)
@@ -416,8 +411,8 @@ class MainWindow(QMainWindow):
         #Change to results page
         self.mainStack.setCurrentIndex(2)
         #Calculate the indices of last and first nav buttons
-        minPage = max(page-2,1) if max(page-2,1)+4<self.a.lPage else self.a.lPage-4
-        maxPage = minPage+4
+        minPage = max(page-2,1) if max(page-2,1)+4<self.a.lPage else max(self.a.lPage-4,1)
+        maxPage = min(minPage+4,self.a.lPage)
         #Delete all nav buttons
         for i in self.navButtons:
             self.searchFrame.horizontalLayout_2.removeWidget(i[0])
@@ -449,16 +444,11 @@ class MainWindow(QMainWindow):
             self.searchItems = []
             item = QListWidgetItem()
             item.setText(comic[1])
-            brush = qtg.QBrush(qtg.QColor(255,255,255))
-            brush.setStyle(Qt.BrushStyle.SolidPattern)
-            item.setForeground(brush)
             item.setData(3,comic[0])
             self.searchFrame.resultsList.addItem(item)
             self.addIcon(page,n,3)
         
-        self.searchFrame.resultsList.itemClicked.connect(lambda:self.mainStack.setCurrentIndex(1))
-        self.searchFrame.resultsList.itemClicked.connect(self.comicSelected)
-
+        self.searchFrame.resultsList.itemPressed.connect(self.comicSelected)
         #Get images of search results
         if page not in self.a.downloadedImages or (page in self.a.downloadedImages and len(self.a.downloadedImages[page])!=self.a.searchResults[page]):
             self.createThread(1)
@@ -470,7 +460,7 @@ class MainWindow(QMainWindow):
         
 
     def clearPage(self,page):
-        for button,mode in self.navButtons:
+        for button,__ in self.navButtons:
             button.setDisabled(True)
         eventLoop = QEventLoop()
         if 1 in self.worker:
@@ -483,6 +473,7 @@ class MainWindow(QMainWindow):
         self.showPage(page)
 
     def comicSelected(self,clickedItem):
+        self.searchFrame.resultsList.itemPressed.disconnect()
         self.getChaps(clickedItem.data(3),back=True)
     
 
@@ -529,11 +520,11 @@ class MainWindow(QMainWindow):
         label = QLabel(parent=self.downloadsFrame)
         label.setObjectName(name)
         label.setMinimumSize(QSize(200, 25))
-        label.setMaximumSize(QSize(300, 25))
+        label.setMaximumSize(QSize(500, 50))
         label.setText(name)
         label.setWordWrap(True)
         font = qtg.QFont()
-        font.setPointSize(12)
+        font.setPointSize(16)
         label.setFont(font)
         horizontalLayout.addWidget(label)
         progressBar = QProgressBar(parent=self.downloadsFrame,value=0)
@@ -546,7 +537,7 @@ class MainWindow(QMainWindow):
         widget = QWidget()
         widget.setLayout(horizontalLayout)
         item = QListWidgetItem()
-        item.setSizeHint(QSize(100,50))
+        item.setSizeHint(QSize(100,100))
         self.downloadsFrame.progressList.addItem(item)
         self.downloadsFrame.progressList.setItemWidget(item,widget)
         return progressBar

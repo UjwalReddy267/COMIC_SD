@@ -3,10 +3,8 @@ sys.path.append('../Comic-dl')
 from comic_dl_class import comic_site
 
 class comicextra(comic_site):
-    image_location = 'src'
     search_link = "https://ww1.comicextra.com/comic-search?key="
     search_res_box = 'cartoon-box'
-    lPage = 0
 
     def __init__(self,query):
         super().__init__()
@@ -48,12 +46,6 @@ class comicextra(comic_site):
         self.chapters = [name,chapters,titles]
         return 1
     
-    
-    def no_results(self,soup):
-        if len(soup.find_all('div',{'class':'general-nav'})) != 2:
-            return 1
-        else: return 0
-    
     def get_search_titles(self,page):
         titles = []
         link = self.search_link+self.query+'&page='+str(page)
@@ -62,7 +54,7 @@ class comicextra(comic_site):
             return -1
         table = soup.find_all('div',{'class':'cartoon-box'})
         if table == []: return 0
-        for n,box in enumerate(table):
+        for box in table:
             imgLink = box.find('img').get('src')
             titles.append([box.find_all('a')[0].get('href'),box.find_all('a')[1].get_text(),imgLink])
         self.searchResults[page] = titles
@@ -70,11 +62,10 @@ class comicextra(comic_site):
 
     def get_last_page(self,search_term):     
         self.lPage = 1
-
         while 1:
             soup = self.get_soup(self.search_link+search_term+'&page='+str(self.lPage))
             if soup == None:
-                return None
+                return -1
             text = soup.find_all('div',{'class','general-nav'})[-1]
             try:
                 last = text.find_all('a')[-1].get_text()
@@ -93,6 +84,3 @@ class comicextra(comic_site):
             else:
                 break
         return 1
-
-
-

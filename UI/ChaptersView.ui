@@ -16,6 +16,9 @@
   <layout class="QVBoxLayout" name="verticalLayout">
    <item>
     <layout class="QHBoxLayout" name="horizontalLayout_3">
+     <property name="spacing">
+      <number>0</number>
+     </property>
      <property name="leftMargin">
       <number>0</number>
      </property>
@@ -49,7 +52,7 @@
         </font>
        </property>
        <property name="styleSheet">
-        <string notr="true">color:#FFFFFF</string>
+        <string notr="true"/>
        </property>
        <property name="text">
         <string>Loading...</string>

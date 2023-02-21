@@ -6,7 +6,6 @@ class comiconline(comic_site):
     search_link = "https://comiconlinefree.net/comic-search?key="
     search_res_box = 'manga-box'
     
-
     def __init__(self,query):
         super().__init__()
         self.query = query
@@ -47,11 +46,6 @@ class comiconline(comic_site):
         return 1
 
 
-    def no_results(self,soup):
-        if len(soup.find_all('div',{"class":"general-nav"})) == 0:
-            return 1
-        else: return 0
-
     def get_search_titles(self,page):
         titles = []
         link = self.search_link+self.query+'&page='+str(page)
@@ -66,10 +60,8 @@ class comiconline(comic_site):
         self.searchResults[page] = titles
         return 1
 
-    def get_last_page(self,search_term):
-        results = self.searchResults        
-        self.lPage = 1
-        
+    def get_last_page(self,search_term):      
+        self.lPage = 1    
         while 1:
             soup = self.get_soup(self.search_link+search_term+'&page='+str(self.lPage))
             if soup == None:
@@ -90,8 +82,6 @@ class comiconline(comic_site):
             else:
                 break
         return 1
-
-
 
 
 

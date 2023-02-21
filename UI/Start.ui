@@ -44,8 +44,7 @@
       </font>
      </property>
      <property name="styleSheet">
-      <string notr="true">font-family:Helvetica;
-color:#ffffff;</string>
+      <string notr="true">font-family:Helvetica;</string>
      </property>
      <property name="text">
       <string>Enter the name of a comic to search or paste the link to a comic to download</string>
