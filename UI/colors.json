@@ -1,0 +1,9 @@
+{
+"mainFrame": "#mainStack{background-color:#ffb703}#label{color:#000000;background-color:#219ebc}#frame{background-color:#219ebc}",
+"startFrame":"#startFrame{background-color:#ffb703;color:#000000}",
+"chaptersView": "#chapterList{background-color:#ffb703}#comicNameLabel{background-color:#d00000;color:#FFFFFF}#coverImageLabel{background-color:#d00000}", 
+"resultsView": "#resultsList{background-color:#ffb703;color:#000000}", 
+"mainProgressBar": "QProgressBar::chunk{background-color:#219ebc;}QProgressBar{text-align:center;color:#000000}", 
+"progressBar": "QProgressBar::chunk{background-color:#d00000;}QProgressBar{text-align:center;color:#000000}",
+"downloadsView": "#progressList{background-color:#ffb703}#mainProgressFrame{background-color:#d00000}"
+}
