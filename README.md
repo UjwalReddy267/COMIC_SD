@@ -10,3 +10,8 @@ In the entry box, you can either enter the link to a single comic or paste the l
 
 ## Theme Customization
 Customize the colours of the UI in the "color.json" file
+
+## Suppported Sites
+1. https://readcomiconline.li/
+2. https://comicextra.net/
+3. https://comiconlinefree.net/
