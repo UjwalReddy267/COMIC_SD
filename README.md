@@ -8,5 +8,5 @@ Copy the link of the comic you want to download and enter it in the text box. Th
 
 In the entry box, you can either enter the link to a single comic or paste the link to the list of chapters and select the chapters you want to download
 
-## Theme Custumization
+## Theme Customization
 Customize the colours of the UI in the "color.json" file
