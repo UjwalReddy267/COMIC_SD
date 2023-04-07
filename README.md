@@ -7,3 +7,6 @@ Download the latest .exe file from releases and run it to start
 Copy the link of the comic you want to download and enter it in the text box. The comic is downloaded and stored in the downloads folder
 
 In the entry box, you can either enter the link to a single comic or paste the link to the list of chapters and select the chapters you want to download
+
+## Theme Customization
+Customize the colours of the UI in the "color.json" file
