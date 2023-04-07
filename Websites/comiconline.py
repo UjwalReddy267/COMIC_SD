@@ -10,7 +10,7 @@ class comiconline(comic_site):
         super().__init__()
         self.query = query
         return
-   
+
     def is_chap_list(self,link):
         return 1 if link.split('/')[3] == 'comic' else 0
 
