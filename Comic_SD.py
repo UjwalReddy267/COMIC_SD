@@ -1,24 +1,29 @@
-from Websites.comicextra import comicextra
-from Websites.comiconline import comiconline
-from Websites.readcomiconline import readcomiconline
+import traceback 
+from UI.gui import MainWindow
 from datetime import datetime
 import os
+import sys
+from PyQt6.QtWidgets import QApplication
+import shutil 
+try:
 
-start = datetime.now()
-if not os.path.exists('./downloads'):
-    os.mkdir('downloads')
-with open('log.txt','a') as log:
-    log.write(str(datetime.now())+'\n')
+    if not os.path.exists('./downloads'):
+        os.mkdir('./downloads')
+    if not os.path.exists('./downloads/temp'):
+        os.mkdir('./downloads/temp')
+    with open('log.txt','a') as log:
+        log.write(str(datetime.now())+'\n')
+    json = None
+    if os.path.exists('./colors.json'):
+        json = './colors.json'
 
-print("1)comicextra.com \n2)comiconlinefree.net\n3)readcomiconline.li")
-query = input('Select website to search or enter comic link: ')
-if 'comicextra' in query or query == '1':
-    a = comicextra(query)
-    pass
-elif 'comiconlinefree' in query or query == '2':
-    a = comiconline(query)
-elif 'readcomiconline' in query or query == '3':
-    a = readcomiconline(query)
+    app = QApplication(sys.argv)
+    window = MainWindow(json)
+    window.start()
+    app.exec()
+    shutil.rmtree('./downloads/temp')
 
-print(datetime.now()-start)
-input()
+except Exception as e:
+    with open('log.txt','a') as f:
+        f.write(str(e))
+        f.write(traceback.format_exc())
