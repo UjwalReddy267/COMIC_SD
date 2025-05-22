@@ -75,6 +75,9 @@ class Worker(QObject):
     def download(self):
         comics = self.comics
         for n,comic in enumerate(comics):
+            if self._stop:
+                self.finished.emit()
+                return
             err,images,title = self.a.comic_dl(comic)
             if err!=1:
                 self.error.emit(err)
@@ -90,16 +93,46 @@ class Worker(QObject):
                 runnables.append(runnable)
                 pool.start(runnable)
             progress = 0
-            while progress<100:
+            # Ensure self._stop is checked in this loop too
+            while progress<100 and not self._stop:
                 progress = 0
+                all_runnables_finished = True
                 for runnable in runnables:
                     progress += runnable.progress
-                progress = (100*progress)//len(images)
-                self.downloadProgress.emit(n,progress)
+                    if hasattr(runnable, 'links') and runnable.progress < len(runnable.links): # Assuming runnable.links exists
+                        all_runnables_finished = False
+                
+                if images: # Avoid division by zero if images is empty
+                    current_progress = (100*progress)//len(images) if len(images) > 0 else 100
+                else:
+                    current_progress = 100
+
+                self.downloadProgress.emit(n,current_progress)
+                
+                # Break if all runnables are done or if _stop is signaled
+                if all_runnables_finished and progress >= len(images):
+                    break
+                if self._stop: # Check stop flag here to exit loop early
+                    self.finished.emit()
+                    return
+                QThread.msleep(100) # Small delay to avoid tight loop, let other events process
+
+            if self._stop: # Check again before file operations
+                self.finished.emit()
+                return
+
             fil = ZipFile('downloads/'+title+'.cbr','w')
             for i in range(len(images)):
+                if self._stop: # Check before each write operation
+                    fil.close() # Attempt to close the zip file
+                    # Potentially delete partially created zip file if required
+                    self.finished.emit()
+                    return
                 fil.write('downloads/temp/'+str(i)+'.jpg')
             fil.close()
+            if self._stop:
+                self.finished.emit()
+                return
             self.progress.emit(100*(n+1)//len(comics))
         self.finished.emit()
 
@@ -137,17 +170,43 @@ class Worker(QObject):
         page = self.page
         if page not in self.a.downloadedImages:
             self.a.downloadedImages[page] = []
+
+        # Wait for searchResults to be populated, but check _stop flag
+        max_wait_time_ms = 30000  # Max wait 30 seconds for results to appear
+        current_wait_time_ms = 0
+        wait_interval_ms = 100
+
         while page not in self.a.searchResults:
-            pass
+            if self._stop:
+                if emit: self.finished.emit()
+                return
+            if current_wait_time_ms >= max_wait_time_ms:
+                self.error.emit(-2) # Indicate a timeout or missing data error
+                return
+            QThread.msleep(wait_interval_ms)
+            current_wait_time_ms += wait_interval_ms
+            
+        # Ensure page is still in searchResults after waiting, in case of race conditions or changes
+        if page not in self.a.searchResults: 
+            self.error.emit(-2) # Indicate a timeout or missing data error
+            return
+
         for i in range(len(self.a.searchResults[page])):
             if self._stop:
                 if emit:
                     self.finished.emit()
                 return
             if i not in self.a.downloadedImages[page]:
+                # Check _stop before potentially long blocking call
+                if self._stop:
+                    if emit: self.finished.emit()
+                    return
                 err = self.a.img_download(self.a.searchResults[page][i][2],f'{page}_{i}','downloads/temp/')
-                if err == -1:
+                if err == -1: # Connection error from img_download
                     self.error.emit(-1)
+                    return
+                elif err == -2 and self._stop: # Assuming img_download might return a specific code if interrupted by _stop
+                    if emit: self.finished.emit()
                     return
                 self.a.downloadedImages[page].append(i)
             self.progress.emit(i)
@@ -220,16 +279,44 @@ class MainWindow(QMainWindow):
         self.searchFrame.setStyleSheet(self.colors['resultsView'])
         self.downloadsFrame.setStyleSheet(self.colors['downloadsView']+self.colors['mainProgressBar'])
 
+        # Define pastel styles directly for reliable application
+        genericButton_style = "QPushButton{background-color:#B0E0E6; color:#36454F; border:1px solid #36454F; padding:5px 10px; border-radius:5px;} QPushButton:hover{background-color:#C0E8Ee;} QPushButton:disabled{background-color:#D3D3D3; color:#A9A9A9;}"
+        lineEdit_style = "QLineEdit{background-color:#E6E6FA; color:#36454F; border:1px solid #B0E0E6; border-radius:3px; padding: 3px;}"
+        comboBox_style = "QComboBox{background-color:#E6E6FA; color:#36454F; border:1px solid #B0E0E6; border-radius:3px; padding:3px;} QComboBox QAbstractItemView{background-color:#E6E6FA; color:#36454F; selection-background-color:#B0E0E6;}"
+
+        # Apply generic styles to specific widgets
+        if hasattr(self, 'homeButton'): # These are on self.stack
+            self.homeButton.setStyleSheet(genericButton_style)
+        if hasattr(self, 'downloadButton'):
+            self.downloadButton.setStyleSheet(genericButton_style)
+        if hasattr(self, 'backButton'):
+            self.backButton.setStyleSheet(genericButton_style)
+        
+        if hasattr(self.startFrame, 'goButton'):
+            self.startFrame.goButton.setStyleSheet(genericButton_style)
+        if hasattr(self.startFrame, 'queryField'):
+            self.startFrame.queryField.setStyleSheet(lineEdit_style)
+        if hasattr(self.startFrame, 'siteSelector'):
+            self.startFrame.siteSelector.setStyleSheet(comboBox_style)
+
 
     def reset(self):
         self.centralWidget().deleteLater()
         keys = list(self.worker.keys())
         for i in keys:
-            eventLoop = QEventLoop()
-            self.worker[i]._stop = True
-            while self.thread[i].isRunning():
-                eventLoop.processEvents()
-                time.sleep(0.1)
+            if i in self.thread and self.thread[i].isRunning():
+                if i in self.worker:
+                    self.worker[i]._stop = True
+                self.thread[i].quit()
+                if not self.thread[i].wait(5000):  # Wait for 5 seconds
+                    print(f"Thread {i} did not terminate gracefully, forcing termination.")
+                    self.thread[i].terminate()
+                    self.thread[i].wait()  # Wait for termination to complete
+            # Clean up worker and thread references if they still exist
+            if i in self.worker:
+                del self.worker[i]
+            if i in self.thread:
+                del self.thread[i]
         self.fillStack()
         self.start()
 
@@ -247,10 +334,18 @@ class MainWindow(QMainWindow):
         query = self.startFrame.queryField.text()
         if '.' not in query or '/' not in query:
             self.startFrame.queryField.setDisabled(True)
-            self.startFrame.startLabel.setText('Select a website')
+            self.startFrame.startLabel.setText('Select a website and click Go again')
             self.startFrame.siteSelector.show()
-            self.startFrame.goButton.clicked.connect(lambda:self.startFrame.goButton.setDisabled(True))
-            self.startFrame.goButton.clicked.connect(lambda:self.search(query))
+            # Disconnect previous connections to avoid multiple calls or logic errors
+            try:
+                self.startFrame.goButton.clicked.disconnect()
+            except TypeError: # No connections
+                pass
+            # Now, clicking Go will initiate the search with the selected site
+            self.startFrame.goButton.clicked.connect(lambda: self.search(query))
+            # Optionally, disable the button until a site is selected, then re-enable.
+            # For now, allow clicking Go again, which will trigger search.
+            # self.startFrame.goButton.setDisabled(True) # Consider this if site selection must happen first
         else:
             self.parseLink(query)
 
@@ -283,12 +378,19 @@ class MainWindow(QMainWindow):
         self.chaptersFrame.comicNameLabel.setText('Loading...')
         self.chaptersFrame.coverImageLabel.clear()
         self.mainStack.setCurrentIndex(1)
-        eventLoop = QEventLoop()
-        if 1 in self.worker:
-            self.worker[1]._stop = True
-            while self.thread[1].isRunning():
-                eventLoop.processEvents()
-                time.sleep(0.1)
+        if 1 in self.thread and self.thread[1].isRunning():
+            if 1 in self.worker:
+                self.worker[1]._stop = True
+            self.thread[1].quit()
+            if not self.thread[1].wait(5000):
+                print("Thread 1 (getChaps) did not terminate gracefully, forcing termination.")
+                self.thread[1].terminate()
+                self.thread[1].wait()
+            # Clean up worker and thread references if they still exist
+            if 1 in self.worker:
+                del self.worker[1]
+            if 1 in self.thread:
+                del self.thread[1]
         self.createThread(1)
         self.worker[1].a = self.a
         self.worker[1].link = link
@@ -343,12 +445,23 @@ class MainWindow(QMainWindow):
                 pBars.append(self.addPBar(titles[i]))
         else:
             pBars.append(self.downloadsFrame.mainProgressBar)
-        eventLoop = QEventLoop()
-        if 2 in self.worker:
-            self.worker[2]._stop = True
-            while self.thread[2].isRunning():
-                eventLoop.processEvents()
-        self.createThread(1)
+        # Use thread ID 1 as per existing logic for self.createThread(1)
+        # The original code uses thread ID 2 for stopping but creates thread 1.
+        # This seems like a bug. Assuming we stop thread 1 if it's running.
+        if 1 in self.thread and self.thread[1].isRunning():
+            if 1 in self.worker:
+                self.worker[1]._stop = True
+            self.thread[1].quit()
+            if not self.thread[1].wait(5000):
+                print("Thread 1 (downloadChaps) did not terminate gracefully, forcing termination.")
+                self.thread[1].terminate()
+                self.thread[1].wait()
+            if 1 in self.worker: # Clean up after stopping
+                del self.worker[1]
+            if 1 in self.thread:
+                del self.thread[1]
+
+        self.createThread(1) # This will now correctly create thread 1
         self.worker[1].a = self.a
         self.worker[1].comics = links
         self.worker[1].downloadProgress.connect(lambda i,n:pBars[i].setValue(n))
@@ -462,12 +575,19 @@ class MainWindow(QMainWindow):
     def clearPage(self,page):
         for button,__ in self.navButtons:
             button.setDisabled(True)
-        eventLoop = QEventLoop()
-        if 1 in self.worker:
-            self.worker[1]._stop = True
-            while self.thread[1].isRunning():
-                eventLoop.processEvents()
-                time.sleep(0.1)
+        if 1 in self.thread and self.thread[1].isRunning():
+            if 1 in self.worker:
+                self.worker[1]._stop = True
+            self.thread[1].quit()
+            if not self.thread[1].wait(5000):
+                print("Thread 1 (clearPage) did not terminate gracefully, forcing termination.")
+                self.thread[1].terminate()
+                self.thread[1].wait()
+            # Clean up worker and thread references if they still exist
+            if 1 in self.worker:
+                del self.worker[1]
+            if 1 in self.thread:
+                del self.thread[1]
         self.searchFrame.resultsList.clear()
         self.searchFrame.resultsList.resetVerticalScrollMode()
         self.showPage(page)
@@ -482,6 +602,16 @@ class MainWindow(QMainWindow):
         navButton.setText(text)
         navButton.setMinimumSize(QSize(30,30))
         navButton.setMaximumSize(QSize(30,30))
+        
+        # Apply generic button style
+        genericButton_style = "QPushButton{background-color:#B0E0E6; color:#36454F; border:1px solid #36454F; padding:5px; border-radius:5px;} QPushButton:hover{background-color:#C0E8Ee;} QPushButton:disabled{background-color:#D3D3D3; color:#A9A9A9;}"
+        # Adjusted padding for smaller nav buttons
+        if text == "<<" or text == ">>":
+             navButton.setStyleSheet(genericButton_style.replace("padding:5px 10px", "padding:5px"))
+        else: # Numeric page buttons
+             navButton.setStyleSheet(genericButton_style.replace("padding:5px 10px", "padding:5px; min-width: 20px;"))
+
+
         navButton.clicked.connect(lambda :self.clearPage(page))
         navButton.setDisabled(disabled)
         navButton.clicked.connect(self.searchFrame.navBar.hide)
@@ -510,7 +640,8 @@ class MainWindow(QMainWindow):
         self.worker[n].finished.connect(self.thread[n].quit)
         self.thread[n].finished.connect(self.thread[n].deleteLater)
         self.worker[n].finished.connect(self.worker[n].deleteLater)
-        self.worker[n].finished.connect(lambda i=n:self.worker.pop(i))
+        # Use pop with a default to avoid KeyError if already deleted elsewhere (e.g. forceful termination)
+        self.worker[n].finished.connect(lambda i=n:self.worker.pop(i, None))
         self.worker[n].error.connect(self.handleError)
         self.worker[n].error.connect(self.thread[n].quit)
 
@@ -543,13 +674,42 @@ class MainWindow(QMainWindow):
         return progressBar
 
     def handleError(self,err):
-        if self.mainStack.currentIndex !=0:
+        # Ensure we are on the start page
+        if self.mainStack.currentIndex() != 0:
             self.mainStack.setCurrentIndex(0)
-        self.startFrame.siteSelector.hide()
-        self.startFrame.queryField.hide()
-        self.startFrame.goButton.hide()
-        self.homeButton.setDisabled(False)
+
+        # Reset UI elements on the startFrame to allow a new attempt
+        self.startFrame.startLabel.setText('An error occurred. Please try again.')
         if err == -1:
-            self.startFrame.startLabel.setText('Connection Error. Try again later')
+            self.startFrame.startLabel.setText('Connection Error. Check your internet and try again.')
         elif err == 0:
-            self.startFrame.startLabel.setText('Not found')
+            self.startFrame.startLabel.setText('Comic or chapter not found.')
+        elif err == -2: # Specific timeout error from Worker.searchPageImages
+             self.startFrame.startLabel.setText('Operation timed out while fetching search page details.')
+
+
+        self.startFrame.queryField.show()
+        self.startFrame.queryField.setDisabled(False)
+        self.startFrame.queryField.clear() # Clear previous query
+
+        self.startFrame.siteSelector.hide() # Keep site selector hidden initially
+
+        self.startFrame.goButton.show()
+        self.startFrame.goButton.setDisabled(False)
+        # Disconnect any existing connections from goButton (e.g., from a pending search)
+        try:
+            self.startFrame.goButton.clicked.disconnect()
+        except TypeError: # No connections
+            pass
+        # Reconnect goButton to the initial self.go method
+        self.startFrame.goButton.clicked.connect(self.go)
+
+        # Ensure main navigation buttons are in a sensible state
+        self.homeButton.setDisabled(False) # Already done, but good to confirm
+        self.homeButton.show() # Should generally be visible if an error occurs, allowing reset
+        
+        # Hide buttons that are not relevant to the start page or error state
+        if self.downloadButton: # Check if button exists
+            self.downloadButton.hide()
+        if self.backButton: # Check if button exists
+            self.backButton.hide()
